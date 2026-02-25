@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Smart Scan — Unified Photo Scanner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<!-- Geist font (used in Figma designs) -->
+<link href="https://cdn.jsdelivr.net/npm/geist@1.3.0/dist/fonts/geist-sans/style.css" rel="stylesheet">
+<style>
+/* =============================================
+   RESET & PAGE
+   ============================================= */
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background: #0A0B0F;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  color: #fff;
+  overflow-y: auto;
+  overflow-x: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* =============================================
+   Section wrapper
+   ============================================= */
+.proto-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 40px 0 80px;
+}
+
+/* =============================================
+   Section header
+   ============================================= */
+.proto-section {
+  text-align: center;
+  margin-bottom: 20px;
+}
+.proto-section h2 {
+  font-size: 22px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: -0.3px;
+}
+.proto-section .tap-hint {
+  font-size: 13px;
+  color: #555;
+  margin-top: 4px;
+}
+.proto-section .step-counter {
+  font-size: 13px;
+  color: #8B8D9E;
+  margin-top: 6px;
+}
+
+/* =============================================
+   Progress dots
+   ============================================= */
+.progress-dots {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+.progress-dots .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #2A2D42;
+  transition: background 0.3s, transform 0.3s;
+}
+.progress-dots .dot.active {
+  background: #FFD60A;
+  transform: scale(1.25);
+}
+
+/* =============================================
+   Phone frame
+   ============================================= */
+.phone-frame {
+  width: 393px;
+  height: 852px;
+  border-radius: 47px;
+  border: 2px solid #2A2D42;
+  background: #000;
+  overflow: hidden;
+  position: relative;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+/* =============================================
+   Screen transitions
+   ============================================= */
+@keyframes tooltip-slide-in {
+  from { opacity: 0; transform: translateX(-50%) translateY(12px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+@keyframes tooltip-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* Screen 1 tooltip: slides up into view */
+.screen:nth-child(1).active .tooltip {
+  animation: tooltip-slide-in 0.35s cubic-bezier(0.32, 0.72, 0, 1) 0.1s both;
+}
+/* Screen 2+ tooltips: fade in */
+.screen:nth-child(2).active .tooltip,
+.screen:nth-child(3).active .tooltip {
+  animation: tooltip-fade-in 0.3s cubic-bezier(0.32, 0.72, 0, 1) both;
+}
+
+/* Keyframes: quick blur-in then blur-out on camera area only */
+@keyframes mode-blur {
+  0%   { filter: blur(0); opacity: 1; }
+  45%  { filter: blur(4px); opacity: 0.85; }
+  55%  { filter: blur(4px); opacity: 0.85; }
+  100% { filter: blur(0); opacity: 1; }
+}
+
+/* Applied to .camera-area / .camera-area-blurred during mode switch */
+.camera-blur-switch {
+  animation: mode-blur 0.7s linear forwards;
+}
+
+.screen {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+  will-change: opacity, transform;
+}
+.screen.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* =============================================
+   Status bar (light header — dark text)
+   ============================================= */
+.status-bar {
+  height: 54px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  padding: 0 28px 8px;
+}
+.status-bar .time {
+  font-size: 15px;
+  font-weight: 600;
+  color: #000;
+}
+.status-bar .icons {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.signal-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 1.5px;
+  height: 12px;
+}
+.signal-bars span {
+  width: 3px;
+  background: #000;
+  border-radius: 1px;
+}
+.signal-bars span:nth-child(1) { height: 4px; }
+.signal-bars span:nth-child(2) { height: 6px; }
+.signal-bars span:nth-child(3) { height: 9px; }
+.signal-bars span:nth-child(4) { height: 12px; }
+.wifi-icon {
+  width: 16px;
+  height: 12px;
+  position: relative;
+}
+.wifi-icon::before,
+.wifi-icon::after {
+  content: '';
+  position: absolute;
+  border: 2px solid #000;
+  border-bottom: none;
+  border-radius: 50% 50% 0 0;
+}
+.wifi-icon::before {
+  width: 16px; height: 10px; bottom: 2px; left: 0;
+}
+.wifi-icon::after {
+  width: 10px; height: 6px; bottom: 2px; left: 3px;
+}
+.wifi-dot {
+  width: 3px; height: 3px; background: #000;
+  border-radius: 50%; position: absolute;
+  bottom: 0; left: 50%; transform: translateX(-50%);
+}
+.battery {
+  width: 25px; height: 12px;
+  border: 1.5px solid rgba(0,0,0,0.8);
+  border-radius: 3px; position: relative;
+  display: flex; align-items: center; padding: 2px;
+}
+.battery::after {
+  content: ''; position: absolute;
+  right: -4px; top: 50%; transform: translateY(-50%);
+  width: 2px; height: 5px;
+  background: rgba(0,0,0,0.8); border-radius: 0 1px 1px 0;
+}
+.battery-fill {
+  width: 75%; height: 100%;
+  background: #000; border-radius: 1px;
+}
+
+/* =============================================
+   Scanner header (light bg — dark text)
+   ============================================= */
+.scanner-top {
+  background: #f4f4f4;
+}
+.scanner-header {
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  position: relative;
+}
+.scanner-header .back-arrow {
+  font-size: 28px;
+  color: #1A1A1A;
+  line-height: 1;
+}
+.scanner-header .title {
+  font-family: 'Geist', 'Inter', sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  color: #3b3b3b;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+}
+.instruction {
+  font-family: 'Geist', 'Inter', sans-serif;
+  font-size: 12px;
+  color: #6e6e73;
+  text-align: center;
+  padding: 6px 30px 10px;
+  letter-spacing: -0.2px;
+}
+
+/* =============================================
+   Camera area
+   ============================================= */
+.camera-area {
+  width: 100%;
+  height: 478px;
+  background: #000;
+  position: relative;
+  overflow: hidden;
+}
+
+/* =============================================
+   Corner brackets
+   ============================================= */
+.corner-brackets {
+  position: absolute;
+  width: 290px;
+  height: 283px;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 5;
+  pointer-events: none;
+}
+.bracket {
+  position: absolute;
+  width: 35px;
+  height: 35px;
+}
+.bracket-tl { top: 0; left: 0; border-top: 3px solid #fff; border-left: 3px solid #fff; border-top-left-radius: 12px; }
+.bracket-tr { top: 0; right: 0; border-top: 3px solid #fff; border-right: 3px solid #fff; border-top-right-radius: 12px; }
+.bracket-bl { bottom: 0; left: 0; border-bottom: 3px solid #fff; border-left: 3px solid #fff; border-bottom-left-radius: 12px; }
+.bracket-br { bottom: 0; right: 0; border-bottom: 3px solid #fff; border-right: 3px solid #fff; border-bottom-right-radius: 12px; }
+
+/* =============================================
+   Mode tabs + bottom controls wrapper (dark bg)
+   ============================================= */
+.controls-area {
+  background: #08070c;
+  position: relative;
+}
+
+/* =============================================
+   Mode tabs
+   ============================================= */
+.mode-tabs {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px 10px;
+  font-family: 'Geist', 'Inter', sans-serif;
+}
+.mode-tabs span {
+  font-size: 16px;
+  font-weight: 500;
+  color: #fff;
+  letter-spacing: -0.2px;
+}
+.mode-tabs span.active-tab {
+  color: #ffe845;
+}
+
+/* =============================================
+   Bottom controls
+   ============================================= */
+.bottom-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 40px 0;
+  position: relative;
+}
+.gallery-icon {
+  position: absolute;
+  left: 40px;
+}
+.shutter-btn {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  border: 4px solid #fff;
+  background: transparent;
+  position: relative;
+}
+.shutter-btn::after {
+  content: '';
+  position: absolute;
+  inset: 4px;
+  border-radius: 50%;
+  background: #fff;
+}
+
+/* =============================================
+   Home indicator
+   ============================================= */
+.home-indicator {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 135px;
+  height: 5px;
+  border-radius: 3px;
+  background: #323232;
+}
+
+/* =============================================
+   Tooltip
+   ============================================= */
+.tooltip {
+  position: absolute;
+  bottom: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 13px;
+  color: #fff;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  z-index: 10;
+  pointer-events: none;
+}
+.tooltip-detect {
+  background: rgba(0,0,0,0.85);
+}
+
+/* =============================================
+   Food photo in camera
+   ============================================= */
+.food-photo-container {
+  position: absolute;
+  top: 0; left: 0; width: 100%; height: 100%;
+}
+
+/* =============================================
+   SCREEN 3: Barcode mode
+   ============================================= */
+
+/* Blurred + darkened camera background */
+.camera-area-blurred {
+  width: 100%;
+  height: 478px;
+  background: #000;
+  position: relative;
+  overflow: hidden;
+}
+/* Blurred background layer */
+.camera-area-blurred .photo-bg {
+  position: absolute;
+  inset: 0;
+  filter: blur(2px);
+}
+.camera-area-blurred .photo-bg img {
+  width: 100%; height: 100%;
+  object-fit: cover;
+}
+/* Dark overlay on blurred image */
+.camera-area-blurred .blur-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1;
+}
+
+/* Barcode alignment box — acts as a "window" showing the clear image */
+.barcode-box-wrapper {
+  position: absolute;
+  top: 174px;
+  left: 16px;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  align-items: center;
+  width: 361px;
+}
+.barcode-box {
+  width: 358px;
+  height: 171px;
+  border-radius: 32px;
+  overflow: hidden;
+  position: relative;
+}
+/* Clear (unblurred) photo inside the box — positioned to match the background */
+.barcode-box img {
+  position: absolute;
+  /* Offset so the image aligns with the blurred background behind it */
+  top: -174px;
+  left: -16px;
+  width: 393px;
+  height: 478px;
+  object-fit: cover;
+}
+.barcode-box-label {
+  font-family: 'Geist', 'Inter', sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  color: #fff;
+  text-align: center;
+  letter-spacing: -0.31px;
+}
+
+/* =============================================
+   Search sheet (bottom)
+   ============================================= */
+@keyframes sheet-slide-up {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+
+.search-sheet {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 390px;
+  height: 162px;
+  background: #fff;
+  border-radius: 24px 24px 0 0;
+  padding: 32px 16px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  z-index: 20;
+}
+/* Animated entrance */
+.screen.active .search-sheet {
+  animation: sheet-slide-up 0.4s cubic-bezier(0.32, 0.72, 0, 1) 0.1s both;
+}
+
+/* Drag handle */
+.sheet-handle {
+  position: absolute;
+  top: 6px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 55px;
+  height: 3px;
+  background: #cecece;
+  border-radius: 1.5px;
+}
+
+/* "Can't find the item?" text */
+.sheet-prompt {
+  font-family: 'Geist', 'Inter', sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  color: #08070c;
+  text-align: center;
+  letter-spacing: -0.31px;
+  line-height: 24px;
+}
+.sheet-prompt a {
+  color: #031aa1;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+/* Search bar */
+.search-bar {
+  width: 358px;
+  height: 56px;
+  background: #fff;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 8px;
+  border: 1px solid #D1D1E4;
+}
+/* Search icon (actual SVG from Figma) */
+.search-bar .icon {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.search-bar .icon img {
+  display: block;
+}
+/* Text cursor line (Figma: #181386 w-1px h-20px) */
+.search-bar .cursor-line {
+  width: 1px;
+  height: 20px;
+  background: #181386;
+  border-radius: 12px;
+  flex-shrink: 0;
+}
+.search-bar .search-text {
+  flex: 1;
+  font-size: 16px;
+  color: #5a577d;
+  letter-spacing: -0.31px;
+  line-height: 24px;
+}
+
+/* Sheet home indicator (dark on white) */
+.sheet-home-indicator {
+  width: 134px;
+  height: 5px;
+  background: #000;
+  border-radius: 100px;
+  margin-top: 16px;
+  margin-bottom: 8px;
+}
+
+</style>
+</head>
+<body>
+
+<div class="proto-wrapper" id="proto-smart-scan">
+
+  <div class="proto-section">
+    <h2>Smart Scan</h2>
+    <div class="tap-hint">Tap to advance</div>
+    <div class="step-counter">Step 1 of 3</div>
+  </div>
+
+  <div class="progress-dots">
+    <div class="dot active"></div>
+    <div class="dot"></div>
+    <div class="dot"></div>
+  </div>
+
+  <div class="phone-frame">
+
+    <!-- SCREEN 1: Auto mode -->
+    <div class="screen active">
+      <div class="scanner-top">
+        <div class="status-bar">
+          <span class="time">9:41</span>
+          <div class="icons">
+            <div class="signal-bars"><span></span><span></span><span></span><span></span></div>
+            <div class="wifi-icon"><div class="wifi-dot"></div></div>
+            <div class="battery"><div class="battery-fill"></div></div>
+          </div>
+        </div>
+        <div class="scanner-header">
+          <span class="back-arrow">&larr;</span>
+          <span class="title">Smart Scan</span>
+          <span class="flash-icon">
+            <img src="assets/flash-off.svg" alt="Flash off" style="width: 20px; height: 22px; display: block;">
+          </span>
+        </div>
+        <div class="instruction">Scan a menu, food, recipe, or barcode to get started.</div>
+      </div>
+      <div class="camera-area">
+        <div class="food-photo-container">
+          <img src="assets/food-photo.jpg" alt="Food" style="width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0;">
+        </div>
+        <div class="corner-brackets">
+          <div class="bracket bracket-tl"></div>
+          <div class="bracket bracket-tr"></div>
+          <div class="bracket bracket-bl"></div>
+          <div class="bracket bracket-br"></div>
+        </div>
+        <div class="tooltip tooltip-detect">Point at anything &mdash; I'll figure it out</div>
+      </div>
+      <div class="controls-area">
+        <div class="mode-tabs">
+          <span>Barcode</span>
+          <span>Food</span>
+          <span class="active-tab">Auto</span>
+          <span>Recipe</span>
+          <span>Menu</span>
+        </div>
+        <div class="bottom-controls">
+          <div class="gallery-icon"><img src="assets/Camera.png" alt="Gallery" style="width: 30px; height: 30px; border-radius: 6px; object-fit: cover;"></div>
+          <div class="shutter-btn"></div>
+        </div>
+      </div>
+      <div class="home-indicator"></div>
+    </div>
+
+    <!-- SCREEN 2: Recipe mode (tab switches to Recipe) -->
+    <div class="screen">
+      <div class="scanner-top">
+        <div class="status-bar">
+          <span class="time">9:41</span>
+          <div class="icons">
+            <div class="signal-bars"><span></span><span></span><span></span><span></span></div>
+            <div class="wifi-icon"><div class="wifi-dot"></div></div>
+            <div class="battery"><div class="battery-fill"></div></div>
+          </div>
+        </div>
+        <div class="scanner-header">
+          <span class="back-arrow">&larr;</span>
+          <span class="title">Smart Scan</span>
+          <span class="flash-icon">
+            <img src="assets/flash-off.svg" alt="Flash off" style="width: 20px; height: 22px; display: block;">
+          </span>
+        </div>
+        <div class="instruction">Scan a menu, food, recipe, or barcode to get started.</div>
+      </div>
+      <div class="camera-area">
+        <div class="food-photo-container">
+          <img src="assets/food-photo.jpg" alt="Food" style="width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0;">
+        </div>
+        <div class="corner-brackets">
+          <div class="bracket bracket-tl"></div>
+          <div class="bracket bracket-tr"></div>
+          <div class="bracket bracket-bl"></div>
+          <div class="bracket bracket-br"></div>
+        </div>
+        <div class="tooltip tooltip-detect">Point at anything &mdash; I'll figure it out</div>
+      </div>
+      <div class="controls-area">
+        <div class="mode-tabs">
+          <span>Barcode</span>
+          <span>Food</span>
+          <span>Auto</span>
+          <span class="active-tab">Recipe</span>
+          <span>Menu</span>
+        </div>
+        <div class="bottom-controls">
+          <div class="gallery-icon"><img src="assets/Camera.png" alt="Gallery" style="width: 30px; height: 30px; border-radius: 6px; object-fit: cover;"></div>
+          <div class="shutter-btn"></div>
+        </div>
+      </div>
+      <div class="home-indicator"></div>
+    </div>
+
+    <!-- SCREEN 3: Barcode mode (blurred camera, alignment box, search sheet) -->
+    <div class="screen">
+      <div class="scanner-top">
+        <div class="status-bar">
+          <span class="time">9:41</span>
+          <div class="icons">
+            <div class="signal-bars"><span></span><span></span><span></span><span></span></div>
+            <div class="wifi-icon"><div class="wifi-dot"></div></div>
+            <div class="battery"><div class="battery-fill"></div></div>
+          </div>
+        </div>
+        <div class="scanner-header">
+          <span class="back-arrow">&larr;</span>
+          <span class="title">Smart Scan</span>
+          <span class="flash-icon">
+            <img src="assets/flash-off.svg" alt="Flash off" style="width: 20px; height: 22px; display: block;">
+          </span>
+        </div>
+        <div class="instruction">Scan a menu, food, recipe, or barcode to get started.</div>
+      </div>
+      <div class="camera-area-blurred">
+        <!-- Blurred background layer -->
+        <div class="photo-bg">
+          <img src="assets/food-photo.jpg" alt="Food">
+        </div>
+        <div class="blur-overlay"></div>
+        <!-- Barcode alignment box — shows clear (unblurred) photo as a window -->
+        <div class="barcode-box-wrapper">
+          <div class="barcode-box">
+            <img src="assets/food-photo.jpg" alt="Food">
+          </div>
+          <div class="barcode-box-label">Align barcode inside the box</div>
+        </div>
+      </div>
+      <div class="controls-area">
+        <div class="mode-tabs">
+          <span class="active-tab">Barcode</span>
+          <span>Food</span>
+          <span>Auto</span>
+          <span>Recipe</span>
+          <span>Menu</span>
+        </div>
+      </div>
+      <div class="home-indicator"></div>
+      <!-- Search sheet sliding up from bottom -->
+      <div class="search-sheet">
+        <div class="sheet-handle"></div>
+        <div class="sheet-prompt">Can't find the item? <a href="#">Search manually</a></div>
+        <div class="search-bar">
+          <div class="icon"><img src="assets/icon-search.svg" alt="Search" width="18" height="18"></div>
+          <div class="cursor-line"></div>
+          <span class="search-text">Enter barcode number</span>
+        </div>
+        <div class="sheet-home-indicator"></div>
+      </div>
+    </div>
+
+  </div><!-- /phone-frame -->
+</div><!-- /proto-smart-scan -->
+
+
+<!-- ═══════════════════════════════════════════════════
+     JAVASCRIPT
+     ═══════════════════════════════════════════════════ -->
+<script>
+(function() {
+
+  var container = document.getElementById('proto-smart-scan');
+  var screens = container.querySelectorAll('.screen');
+  var phone = container.querySelector('.phone-frame');
+  var dots = container.querySelectorAll('.progress-dots .dot');
+  var counter = container.querySelector('.step-counter');
+  var current = 0;
+  var total = screens.length;
+  var isTransitioning = false;
+
+  // Get the camera element from a screen (either .camera-area or .camera-area-blurred)
+  function getCameraEl(screen) {
+    return screen.querySelector('.camera-area') || screen.querySelector('.camera-area-blurred');
+  }
+
+  // Instantly switch screens (no animation)
+  function showImmediate(idx) {
+    if (idx < 0) idx = 0;
+    if (idx >= total) idx = 0;
+    current = idx;
+    for (var i = 0; i < screens.length; i++) {
+      if (i === current) {
+        screens[i].classList.add('active');
+      } else {
+        screens[i].classList.remove('active');
+      }
+    }
+    for (var j = 0; j < dots.length; j++) {
+      if (j === current) {
+        dots[j].classList.add('active');
+      } else {
+        dots[j].classList.remove('active');
+      }
+    }
+    if (counter) {
+      counter.textContent = 'Step ' + (current + 1) + ' of ' + total;
+    }
+  }
+
+  // Switch screens with blur-in / blur-out on camera area only
+  function showWithBlur(idx) {
+    if (isTransitioning) return;
+    if (idx < 0) idx = 0;
+    if (idx >= total) idx = 0;
+    if (idx === current) return;
+
+    isTransitioning = true;
+
+    // Blur out current camera, switch at midpoint, new screen appears clean
+    var outCamera = getCameraEl(screens[current]);
+    if (outCamera) outCamera.classList.add('camera-blur-switch');
+
+    // At peak blur (~350ms), switch to new screen
+    setTimeout(function() {
+      if (outCamera) outCamera.classList.remove('camera-blur-switch');
+      showImmediate(idx);
+      isTransitioning = false;
+    }, 350);
+  }
+
+  // Click on phone frame to advance
+  phone.addEventListener('click', function(e) {
+    if (e.target.closest('.search-sheet') || e.target.closest('button') || e.target.closest('a')) return;
+    showWithBlur(current + 1);
+  });
+
+  showImmediate(0);
+
+  // Keyboard support: Left/Right arrows
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'ArrowRight') {
+      showWithBlur(current + 1);
+    } else if (e.key === 'ArrowLeft') {
+      showWithBlur(current - 1);
+    }
+  });
+
+})();
+</script>
+</body>
+</html>

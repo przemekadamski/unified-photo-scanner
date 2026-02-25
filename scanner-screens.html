@@ -1,0 +1,1844 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1800, initial-scale=0.5">
+<title>Unified Scanner — Missing Screens</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* ===== GLOBAL STYLES ===== */
+  :root {
+    --bg: #121318;
+    --surface: #1A1D2E;
+    --surface-light: #232640;
+    --accent: #4B6BFB;
+    --accent-green: #34C759;
+    --accent-red: #FF3B30;
+    --accent-orange: #FF9F0A;
+    --accent-yellow: #FFD60A;
+    --text-primary: #FFFFFF;
+    --text-secondary: #8B8D9E;
+    --text-tertiary: #5A5C6F;
+    --card-bg: #1E2033;
+    --border: #2A2D42;
+    --phone-width: 393px;
+    --phone-height: 852px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: #0A0B0F;
+    color: var(--text-primary);
+    padding: 40px;
+  }
+
+  h1 {
+    font-size: 28px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    color: var(--text-primary);
+  }
+
+  .subtitle {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin-bottom: 40px;
+  }
+
+  /* ===== SCREEN SECTIONS ===== */
+  .screen-section {
+    margin-bottom: 80px;
+  }
+
+  .section-title {
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--text-tertiary);
+    margin-bottom: 24px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .screen-row {
+    display: flex;
+    gap: 32px;
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+
+  .screen-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .screen-label {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    text-align: center;
+    max-width: var(--phone-width);
+  }
+
+  /* ===== PHONE FRAME ===== */
+  .phone {
+    width: var(--phone-width);
+    height: var(--phone-height);
+    background: var(--bg);
+    border-radius: 44px;
+    overflow: hidden;
+    position: relative;
+    border: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ===== iOS STATUS BAR ===== */
+  .status-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 28px 0;
+    height: 54px;
+    flex-shrink: 0;
+    background: transparent;
+    position: relative;
+    z-index: 10;
+  }
+
+  .status-bar .time {
+    font-size: 16px;
+    font-weight: 600;
+  }
+
+  .status-bar .notch {
+    width: 126px;
+    height: 34px;
+    background: #000;
+    border-radius: 20px;
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
+  .status-bar .icons {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  /* ===== TOP NAV BAR ===== */
+  .nav-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 20px 12px;
+    flex-shrink: 0;
+  }
+
+  .nav-bar .nav-icon {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    color: var(--text-primary);
+    cursor: pointer;
+  }
+
+  .nav-bar .nav-title {
+    font-size: 18px;
+    font-weight: 700;
+    text-align: center;
+  }
+
+  /* ===== MODE PILLS ===== */
+  .mode-pills {
+    display: flex;
+    gap: 6px;
+    padding: 0 20px 12px;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .mode-pill {
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    background: var(--surface);
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .mode-pill.active {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+  }
+
+  .mode-pill.detected {
+    border-color: var(--accent-green);
+    color: var(--accent-green);
+  }
+
+  /* ===== CAMERA VIEW ===== */
+  .camera-view {
+    flex: 1;
+    background: #1a1a2e;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  /* Camera gradient overlay to simulate real camera */
+  .camera-view::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse at 30% 40%, rgba(40, 45, 70, 0.6) 0%, transparent 60%),
+      radial-gradient(ellipse at 70% 60%, rgba(30, 35, 55, 0.5) 0%, transparent 50%),
+      linear-gradient(180deg, rgba(18, 19, 24, 0.3) 0%, transparent 30%, transparent 70%, rgba(18, 19, 24, 0.5) 100%);
+  }
+
+  .camera-helper {
+    position: absolute;
+    bottom: 120px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(10px);
+    padding: 10px 20px;
+    border-radius: 20px;
+    font-size: 14px;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    z-index: 5;
+  }
+
+  .camera-detect-badge {
+    position: absolute;
+    bottom: 170px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(52, 199, 89, 0.15);
+    border: 1px solid var(--accent-green);
+    padding: 6px 14px;
+    border-radius: 16px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--accent-green);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    z-index: 5;
+  }
+
+  .detect-dot {
+    width: 6px;
+    height: 6px;
+    background: var(--accent-green);
+    border-radius: 50%;
+    animation: pulse 1.5s ease infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  /* Green detection border overlay */
+  .camera-view.detecting::after {
+    content: '';
+    position: absolute;
+    inset: 20px;
+    border: 2px solid var(--accent-green);
+    border-radius: 16px;
+    z-index: 4;
+    animation: borderPulse 2s ease infinite;
+  }
+
+  @keyframes borderPulse {
+    0%, 100% { opacity: 0.6; }
+    50% { opacity: 1; }
+  }
+
+  /* ===== CAMERA BOTTOM CONTROLS ===== */
+  .camera-controls {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 20px 30px 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 50px;
+    z-index: 10;
+    background: linear-gradient(transparent, rgba(18, 19, 24, 0.95));
+  }
+
+  .shutter-btn {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    border: 4px solid white;
+    background: transparent;
+    cursor: pointer;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .shutter-btn::after {
+    content: '';
+    width: 58px;
+    height: 58px;
+    border-radius: 50%;
+    background: white;
+  }
+
+  .camera-action {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    color: var(--text-secondary);
+    font-size: 11px;
+    cursor: pointer;
+  }
+
+  .camera-action-icon {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+  }
+
+  /* ===== SCROLLABLE CONTENT ===== */
+  .content-area {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0 20px 30px;
+  }
+
+  /* ===== POINTS BADGE ===== */
+  .points-badge {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: var(--accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  .points-badge.small {
+    width: 32px;
+    height: 32px;
+    font-size: 13px;
+  }
+
+  .points-badge.green { background: var(--accent-green); }
+  .points-badge.orange { background: var(--accent-orange); color: #000; }
+  .points-badge.red { background: var(--accent-red); }
+
+  /* ===== RESULT HEADER ===== */
+  .result-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    padding: 16px 0;
+    gap: 16px;
+  }
+
+  .result-header h2 {
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 1.3;
+  }
+
+  .result-header .source {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-top: 4px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  /* ===== INFO BANNER ===== */
+  .info-banner {
+    background: var(--surface);
+    border-radius: 12px;
+    padding: 14px 16px;
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    margin-bottom: 20px;
+  }
+
+  /* ===== DETAIL ROWS ===== */
+  .detail-section-title {
+    font-size: 16px;
+    font-weight: 700;
+    margin: 20px 0 12px;
+  }
+
+  .detail-card {
+    background: var(--surface);
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .detail-card .label {
+    font-size: 15px;
+    color: var(--text-primary);
+  }
+
+  .detail-card .value {
+    font-size: 15px;
+    color: var(--text-secondary);
+  }
+
+  /* ===== INGREDIENT ROWS ===== */
+  .ingredient-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .ingredient-row:last-child {
+    border-bottom: none;
+  }
+
+  .ingredient-name {
+    flex: 1;
+    font-size: 15px;
+  }
+
+  .ingredient-detail {
+    font-size: 13px;
+    color: var(--text-secondary);
+  }
+
+  .ingredient-points {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--accent);
+    min-width: 40px;
+    text-align: right;
+  }
+
+  /* ===== MENU ITEM ROWS ===== */
+  .menu-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 16px;
+    background: var(--surface);
+    border-radius: 12px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+
+  .menu-item:hover {
+    background: var(--surface-light);
+  }
+
+  .menu-item-info {
+    flex: 1;
+  }
+
+  .menu-item-name {
+    font-size: 15px;
+    font-weight: 500;
+    margin-bottom: 2px;
+  }
+
+  .menu-item-desc {
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+
+  .menu-item-points {
+    font-size: 16px;
+    font-weight: 700;
+    min-width: 50px;
+    text-align: right;
+  }
+
+  .pts-low { color: var(--accent-green); }
+  .pts-mid { color: var(--accent-orange); }
+  .pts-high { color: var(--accent-red); }
+
+  .menu-item-chevron {
+    color: var(--text-tertiary);
+    font-size: 16px;
+  }
+
+  /* ===== SORT BAR ===== */
+  .sort-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 0 12px;
+  }
+
+  .sort-bar .count {
+    font-size: 13px;
+    color: var(--text-secondary);
+  }
+
+  .sort-bar .sort-btn {
+    font-size: 13px;
+    color: var(--accent);
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  /* ===== BUTTONS ===== */
+  .btn-primary {
+    width: 100%;
+    padding: 16px;
+    border: none;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    background: var(--accent);
+    color: white;
+    margin-top: 8px;
+  }
+
+  .btn-secondary {
+    width: 100%;
+    padding: 12px;
+    border: none;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    background: transparent;
+    color: var(--accent);
+    margin-top: 4px;
+  }
+
+  .btn-outline {
+    width: 100%;
+    padding: 14px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    background: transparent;
+    color: var(--text-primary);
+    margin-top: 8px;
+  }
+
+  /* ===== PROCESSING SCREEN ===== */
+  .processing-center {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    padding: 40px;
+  }
+
+  .spinner {
+    width: 48px;
+    height: 48px;
+    border: 3px solid var(--surface-light);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  .processing-msg {
+    font-size: 17px;
+    font-weight: 600;
+    text-align: center;
+  }
+
+  .processing-sub {
+    font-size: 13px;
+    color: var(--text-secondary);
+    text-align: center;
+  }
+
+  /* ===== ERROR / CAN'T IDENTIFY ===== */
+  .error-center {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 40px;
+  }
+
+  .error-icon {
+    font-size: 56px;
+    margin-bottom: 8px;
+  }
+
+  .error-title {
+    font-size: 18px;
+    font-weight: 600;
+    text-align: center;
+  }
+
+  .error-sub {
+    font-size: 14px;
+    color: var(--text-secondary);
+    text-align: center;
+    margin-bottom: 8px;
+  }
+
+  .error-pills {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin: 8px 0;
+  }
+
+  .error-pill {
+    padding: 8px 18px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-primary);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    cursor: pointer;
+  }
+
+  .manual-link {
+    font-size: 14px;
+    color: var(--accent);
+    text-decoration: underline;
+    cursor: pointer;
+    margin-top: 12px;
+  }
+
+  /* ===== TOGGLE ===== */
+  .toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 16px 0 8px;
+  }
+
+  .toggle {
+    width: 50px;
+    height: 30px;
+    border-radius: 15px;
+    background: var(--accent);
+    position: relative;
+    cursor: pointer;
+  }
+
+  .toggle::after {
+    content: '';
+    width: 26px;
+    height: 26px;
+    background: white;
+    border-radius: 50%;
+    position: absolute;
+    top: 2px;
+    right: 2px;
+  }
+
+  /* ===== SERVINGS ADJUSTER ===== */
+  .servings-adjuster {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    background: var(--surface);
+    border-radius: 12px;
+    padding: 12px 16px;
+    margin-bottom: 8px;
+  }
+
+  .adj-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-primary);
+    font-size: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+
+  .adj-value {
+    flex: 1;
+    text-align: center;
+    font-size: 16px;
+    font-weight: 600;
+  }
+
+  .adj-label {
+    font-size: 13px;
+    color: var(--text-secondary);
+  }
+
+  /* ===== HOME INDICATOR ===== */
+  .home-indicator {
+    height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .home-indicator::after {
+    content: '';
+    width: 134px;
+    height: 5px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 3px;
+  }
+
+  /* ===== HAPPY PATH — LIGHT THEME ===== */
+  .phone.light {
+    background: #f4f4f4;
+    border-color: #ddd;
+  }
+  .phone.light .status-bar .time { color: #000; }
+  .phone.light .status-bar .icons { color: #000; }
+  .phone.light .nav-bar .nav-icon { color: #3b3b3b; }
+  .phone.light .nav-bar .nav-title { color: #3b3b3b; }
+
+  /* Helper text below nav (light theme) */
+  .helper-text {
+    font-size: 12px;
+    color: #3b3b3b;
+    text-align: center;
+    padding: 4px 20px 8px;
+    letter-spacing: -0.2px;
+    flex-shrink: 0;
+  }
+
+  /* Black camera viewfinder area */
+  .camera-black {
+    flex: 1;
+    background: #000;
+    position: relative;
+    overflow: hidden;
+  }
+  .camera-black .food-photo {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .camera-black .food-photo.blurred {
+    filter: blur(1.5px);
+  }
+  .camera-black .dark-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.2);
+    z-index: 1;
+  }
+
+  /* Viewfinder corner brackets */
+  .viewfinder {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -45%);
+    width: 290px;
+    height: 283px;
+    z-index: 2;
+  }
+  .vf {
+    position: absolute;
+    width: 35px;
+    height: 36px;
+    border-color: rgba(255,255,255,0.85);
+    border-style: solid;
+    border-width: 0;
+  }
+  .vf.tl { top: 0; left: 0; border-top-width: 3px; border-left-width: 3px; border-top-left-radius: 10px; }
+  .vf.tr { top: 0; right: 0; border-top-width: 3px; border-right-width: 3px; border-top-right-radius: 10px; }
+  .vf.bl { bottom: 0; left: 0; border-bottom-width: 3px; border-left-width: 3px; border-bottom-left-radius: 10px; }
+  .vf.br { bottom: 0; right: 0; border-bottom-width: 3px; border-right-width: 3px; border-bottom-right-radius: 10px; }
+
+  /* Dark bottom controls panel */
+  .controls-dark {
+    height: 218px;
+    background: #08070c;
+    position: relative;
+    flex-shrink: 0;
+  }
+  .controls-dark .shutter-btn {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: 58px;
+  }
+  .controls-dark .gallery-icon {
+    position: absolute;
+    left: 64px;
+    bottom: 80px;
+    width: 30px;
+    height: 30px;
+    object-fit: contain;
+    opacity: 0.8;
+  }
+  .controls-dark .home-bar {
+    position: absolute;
+    bottom: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 135px;
+    height: 5px;
+    background: #323232;
+    border-radius: 50px;
+  }
+
+  /* Detection pill overlays on controls */
+  .pill-overlay {
+    position: absolute;
+    top: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 5px 15px;
+    border-radius: 16px;
+    font-size: 12px;
+    font-weight: 500;
+    white-space: nowrap;
+    z-index: 5;
+  }
+  .pill-overlay.pill-white {
+    background: rgba(255,255,255,0.15);
+    border: 1px solid white;
+    color: white;
+  }
+  .pill-overlay.pill-green {
+    background: rgba(52,199,89,0.15);
+    border: 1px solid #34c759;
+    color: #34c759;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .pill-overlay .dot {
+    width: 6px;
+    height: 6px;
+    background: #34c759;
+    border-radius: 50%;
+    opacity: 0.42;
+  }
+  .pill-overlay .dot.yellow {
+    background: #fde68a;
+  }
+
+  /* Light theme content overrides */
+  .phone.light .content-area { background: transparent; }
+  .phone.light .info-banner { background: white; color: #8b8d9e; }
+  .phone.light .result-header h2 { color: #3b3b3b; }
+  .phone.light .result-header .source { color: #8b8d9e; }
+  .phone.light .detail-section-title { color: #000; }
+  .phone.light .servings-adjuster { background: white; border-radius: 16px; }
+  .phone.light .adj-btn { background: #3b3b3b; color: white; border: none; border-radius: 16px; }
+  .phone.light .adj-value { color: #000; }
+  .phone.light .adj-label { color: #8b8d9e; }
+  .phone.light .ingredient-row {
+    background: white;
+    border-bottom: none;
+    padding: 13px 12px;
+    border-radius: 12px;
+    margin-bottom: 8px;
+  }
+  .phone.light .ingredient-name { color: #3b3b3b; }
+  .phone.light .ingredient-detail { color: #8b8d9e; }
+  .phone.light .btn-primary { background: #4b6bfb; }
+  .phone.light .btn-secondary { color: #4b6bfb; }
+  .phone.light .home-indicator::after { background: rgba(0,0,0,0.15); }
+
+  /* Dark gray points badge (light theme) */
+  .badge-dark {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: #3b3b3b;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    font-weight: 700;
+    color: white;
+    flex-shrink: 0;
+  }
+  .badge-dark.sm {
+    width: 32px;
+    height: 32px;
+    border-radius: 16px;
+    font-size: 13px;
+  }
+
+  /* Ingredients header with Add link */
+  .ingredients-hdr {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 20px 0 12px;
+  }
+  .ingredients-hdr h3 {
+    font-size: 16px;
+    font-weight: 700;
+    color: #000;
+    margin: 0;
+  }
+  .ingredients-hdr .add-link {
+    font-size: 14px;
+    color: #3b3b3b;
+    cursor: pointer;
+  }
+
+  /* ===== INTERACTIVE PROTOTYPE MODE ===== */
+  .prototype-mode {
+    background: #0A0B0F;
+    min-height: 100vh;
+    overflow-x: hidden;
+    padding: 0;
+  }
+
+  .prototype-mode .section-title,
+  .prototype-mode .screen-label {
+    display: none;
+  }
+
+  .prototype-mode .screen-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 40px 20px;
+    margin-bottom: 0;
+  }
+
+  .prototype-mode .screen-row {
+    display: grid;
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr;
+    justify-items: center;
+    align-items: center;
+    gap: 0;
+    width: var(--phone-width);
+    max-width: 100%;
+  }
+
+  .prototype-mode .screen-wrapper {
+    grid-area: 1 / 1;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 300ms ease, visibility 300ms ease;
+    pointer-events: none;
+  }
+
+  .prototype-mode .screen-wrapper.active {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+  }
+
+  /* Navigation dots */
+  .proto-nav {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    margin-top: 32px;
+  }
+
+  .proto-dots {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+
+  .proto-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--text-tertiary);
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    transition: background 300ms ease, transform 300ms ease;
+    position: relative;
+  }
+
+  .proto-dot:hover {
+    background: var(--text-secondary);
+  }
+
+  .proto-dot.active {
+    background: var(--accent);
+    transform: scale(1.25);
+  }
+
+  .proto-counter {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    letter-spacing: 0.05em;
+    font-variant-numeric: tabular-nums;
+    user-select: none;
+  }
+
+  /* Tracked success state for button */
+  .btn-primary.tracked {
+    background: var(--accent-green) !important;
+    transition: background 200ms ease;
+  }
+
+  /* Make shutter + interactive elements look clickable in prototype */
+  .prototype-mode .shutter-btn { cursor: pointer; }
+  .prototype-mode .nav-icon { cursor: pointer; }
+
+  /* ===== YELLOW PILL VARIANT ===== */
+  .pill-overlay.pill-yellow {
+    background: rgba(253, 230, 138, 0.15);
+    border: 1px solid #fde68a;
+    color: #fde68a;
+  }
+
+  /* ===== DETAIL ROW CARDS (Prep time / Cook time / Serves) ===== */
+  .detail-row-card {
+    background: white;
+    border: 1px solid #3b3b3b;
+    border-radius: 16px;
+    padding: 16px 20px;
+    margin-bottom: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .detail-row-card .label {
+    color: #3b3b3b;
+    font-size: 15px;
+  }
+  .detail-row-card .value {
+    color: #8b8d9e;
+    font-size: 15px;
+    font-weight: 500;
+  }
+
+  /* ===== FLASH ICON IN NAV BAR ===== */
+  .nav-icon img,
+  .nav-icon svg {
+    width: 20px;
+    height: 20px;
+    vertical-align: middle;
+  }
+  .phone.light .nav-icon svg path {
+    fill: #3b3b3b;
+  }
+
+  /* ===== MENU RESULT STYLES ===== */
+  .restaurant-name {
+    font-size: 22px;
+    font-weight: 700;
+    color: #3b3b3b;
+    margin-bottom: 4px;
+  }
+  .restaurant-source {
+    font-size: 13px;
+    color: #8b8d9e;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .phone.light .menu-item { background: white; border-radius: 16px; }
+  .phone.light .menu-item-name { color: #3b3b3b; }
+  .phone.light .menu-item-desc { color: #8b8d9e; }
+  .phone.light .menu-item-chevron { color: #8b8d9e; }
+  .phone.light .sort-bar .count { color: #8b8d9e; }
+  .phone.light .sort-bar .sort-btn { color: #4b6bfb; }
+
+  /* ===== AUTO BUTTON (right side of scanner controls) ===== */
+  .auto-btn {
+    position: absolute;
+    right: 41px;
+    bottom: 80px;
+    width: 67px;
+    height: 34px;
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 17px;
+    color: white;
+    font-size: 14px;
+    font-weight: 500;
+    text-align: center;
+    line-height: 34px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .auto-btn:hover { background: rgba(255, 255, 255, 0.18); }
+
+  /* ===== iOS CAMERA DRAWER (frosted glass grid) ===== */
+  .drawer-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s;
+  }
+  .drawer-backdrop.open {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .drawer {
+    position: fixed;
+    left: 50%;
+    width: 370px;
+    background: rgba(30, 30, 30, 0.65);
+    backdrop-filter: blur(50px);
+    -webkit-backdrop-filter: blur(50px);
+    border-radius: 20px;
+    z-index: 1001;
+    padding: 28px 20px;
+    opacity: 0;
+    transform: translateX(-50%) translateY(20px);
+    transition: opacity 0.25s ease, transform 0.25s ease;
+    pointer-events: none;
+  }
+  .drawer-backdrop.open .drawer {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+    pointer-events: auto;
+  }
+  .drawer-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 24px 12px;
+  }
+  .drawer-grid-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .drawer-circle {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.08);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    color: rgba(255, 255, 255, 0.9);
+    transition: background 0.15s, color 0.15s;
+  }
+  .drawer-circle svg {
+    width: 26px;
+    height: 26px;
+  }
+  .drawer-grid-item:hover .drawer-circle {
+    background: rgba(255, 255, 255, 0.14);
+  }
+  .drawer-grid-item.active .drawer-circle {
+    background: rgba(255, 214, 10, 0.22);
+    color: #ffd60a;
+  }
+  .drawer-grid-item.active .drawer-circle svg path {
+    fill: #ffd60a;
+  }
+  .drawer-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.55);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    text-align: center;
+  }
+  .drawer-grid-item.active .drawer-label {
+    color: #ffd60a;
+  }
+</style>
+<script src="https://mcp.figma.com/mcp/html-to-design/capture.js" async></script>
+</head>
+<body>
+
+<!-- ========================================= -->
+<!-- HAPPY PATH — SCANNER FLOW                  -->
+<!-- ========================================= -->
+<div class="screen-section">
+  <div class="section-title">Happy Path — Scanner Flow</div>
+  <div class="screen-row">
+
+    <!-- HP-1: Empty Scanner -->
+    <div class="screen-wrapper">
+      <div class="phone light">
+        <div class="status-bar">
+          <span class="time">9:41</span>
+          <div class="notch"></div>
+          <span class="icons">
+            <span>●●●●</span>
+            <span>📶</span>
+            <span>🔋</span>
+          </span>
+        </div>
+        <div class="nav-bar">
+          <div class="nav-icon">←</div>
+          <div class="nav-title">Scan</div>
+          <div class="nav-icon"><svg width="20" height="20" viewBox="0 0 19.2 22.5" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2.2363 9.38659C2.46607 9.04194 2.93169 8.94882 3.27634 9.17858C3.62051 9.40848 3.71398 9.87417 3.48435 10.2186L1.53708 13.1385C1.49111 13.208 1.48833 13.3056 1.52732 13.3749C1.57671 13.4621 1.66879 13.5123 1.7529 13.5126H7.7529C8.16703 13.5127 8.5029 13.8484 8.5029 14.2626V20.7626C8.50315 20.8606 8.55778 20.9554 8.68845 21.0018C8.80556 21.0312 8.91968 20.9808 8.9697 20.9061L10.7461 18.2421C10.9759 17.8976 11.4415 17.8043 11.7861 18.0341C12.1302 18.2639 12.2236 18.7297 11.9941 19.0741L10.2177 21.7382C9.78892 22.3811 8.98699 22.6486 8.26755 22.4432C8.26054 22.4412 8.25302 22.4396 8.24607 22.4374C7.50662 22.2021 7.00319 21.5409 7.0029 20.7626V15.0126H1.7529C1.11781 15.0124 0.530267 14.6619 0.219699 14.1102C-0.101103 13.5399 -0.0643041 12.837 0.289035 12.3065L2.2363 9.38659ZM1.10544 2.41589C1.40531 2.1303 1.8803 2.14157 2.16599 2.44128L17.166 18.1913C17.4514 18.4912 17.4403 18.9662 17.1406 19.2518C16.8408 19.5373 16.3657 19.526 16.0801 19.2264L1.08005 3.47643C0.794482 3.17659 0.805789 2.70158 1.10544 2.41589ZM8.95603 0.773308C9.35808 0.170231 10.0879 -0.102683 10.7705 0.0350267L10.9062 0.0682298L10.9277 0.0740892C11.6671 0.309474 12.1697 0.970561 12.1699 1.74889V7.49889H17.4199C18.0553 7.49896 18.6435 7.84921 18.9541 8.40124C19.2747 8.97164 19.2373 9.67457 18.8838 10.2049L16.9375 13.1249C16.7077 13.4692 16.2419 13.5623 15.8974 13.3329C15.553 13.1031 15.46 12.6374 15.6894 12.2928L17.6357 9.37292C17.6819 9.30358 17.6853 9.20603 17.6465 9.13659C17.597 9.04896 17.5042 8.99897 17.4199 8.99889H11.4199C11.006 8.99872 10.6702 8.66277 10.6699 8.24889V1.74889C10.6698 1.65059 10.6157 1.55501 10.4843 1.50866C10.3673 1.47961 10.2539 1.53063 10.2041 1.60534L8.24704 4.54089C8.01726 4.88517 7.55151 4.97835 7.207 4.74889C6.86247 4.5192 6.76951 4.05347 6.999 3.70885L8.95603 0.773308Z" fill="currentColor"/></svg></div>
+        </div>
+        <div class="helper-text">Point at anything — I'll figure it out</div>
+        <div class="camera-black">
+          <div class="viewfinder">
+            <div class="vf tl"></div>
+            <div class="vf tr"></div>
+            <div class="vf bl"></div>
+            <div class="vf br"></div>
+          </div>
+        </div>
+        <div class="controls-dark">
+          <img class="gallery-icon" src="assets/Camera.png" alt="Gallery">
+          <div class="shutter-btn"></div>
+          <div class="auto-btn">Auto</div>
+          <div class="home-bar"></div>
+        </div>
+      </div>
+      <div class="screen-label">Empty scanner — Viewfinder<br>Waiting for something to scan</div>
+    </div>
+
+    <!-- HP-2: Food Detected (scanning) -->
+    <div class="screen-wrapper">
+      <div class="phone light">
+        <div class="status-bar">
+          <span class="time">9:41</span>
+          <div class="notch"></div>
+          <span class="icons">
+            <span>●●●●</span>
+            <span>📶</span>
+            <span>🔋</span>
+          </span>
+        </div>
+        <div class="nav-bar">
+          <div class="nav-icon">←</div>
+          <div class="nav-title">Scan</div>
+          <div class="nav-icon"><svg width="20" height="20" viewBox="0 0 19.2 22.5" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2.2363 9.38659C2.46607 9.04194 2.93169 8.94882 3.27634 9.17858C3.62051 9.40848 3.71398 9.87417 3.48435 10.2186L1.53708 13.1385C1.49111 13.208 1.48833 13.3056 1.52732 13.3749C1.57671 13.4621 1.66879 13.5123 1.7529 13.5126H7.7529C8.16703 13.5127 8.5029 13.8484 8.5029 14.2626V20.7626C8.50315 20.8606 8.55778 20.9554 8.68845 21.0018C8.80556 21.0312 8.91968 20.9808 8.9697 20.9061L10.7461 18.2421C10.9759 17.8976 11.4415 17.8043 11.7861 18.0341C12.1302 18.2639 12.2236 18.7297 11.9941 19.0741L10.2177 21.7382C9.78892 22.3811 8.98699 22.6486 8.26755 22.4432C8.26054 22.4412 8.25302 22.4396 8.24607 22.4374C7.50662 22.2021 7.00319 21.5409 7.0029 20.7626V15.0126H1.7529C1.11781 15.0124 0.530267 14.6619 0.219699 14.1102C-0.101103 13.5399 -0.0643041 12.837 0.289035 12.3065L2.2363 9.38659ZM1.10544 2.41589C1.40531 2.1303 1.8803 2.14157 2.16599 2.44128L17.166 18.1913C17.4514 18.4912 17.4403 18.9662 17.1406 19.2518C16.8408 19.5373 16.3657 19.526 16.0801 19.2264L1.08005 3.47643C0.794482 3.17659 0.805789 2.70158 1.10544 2.41589ZM8.95603 0.773308C9.35808 0.170231 10.0879 -0.102683 10.7705 0.0350267L10.9062 0.0682298L10.9277 0.0740892C11.6671 0.309474 12.1697 0.970561 12.1699 1.74889V7.49889H17.4199C18.0553 7.49896 18.6435 7.84921 18.9541 8.40124C19.2747 8.97164 19.2373 9.67457 18.8838 10.2049L16.9375 13.1249C16.7077 13.4692 16.2419 13.5623 15.8974 13.3329C15.553 13.1031 15.46 12.6374 15.6894 12.2928L17.6357 9.37292C17.6819 9.30358 17.6853 9.20603 17.6465 9.13659C17.597 9.04896 17.5042 8.99897 17.4199 8.99889H11.4199C11.006 8.99872 10.6702 8.66277 10.6699 8.24889V1.74889C10.6698 1.65059 10.6157 1.55501 10.4843 1.50866C10.3673 1.47961 10.2539 1.53063 10.2041 1.60534L8.24704 4.54089C8.01726 4.88517 7.55151 4.97835 7.207 4.74889C6.86247 4.5192 6.76951 4.05347 6.999 3.70885L8.95603 0.773308Z" fill="currentColor"/></svg></div>
+        </div>
+        <div class="helper-text">Point at anything — I'll figure it out</div>
+        <div class="camera-black">
+          <img class="food-photo blurred" src="https://www.figma.com/api/mcp/asset/918bdd1a-7ed8-4cb1-8e24-00de639fd987" alt="Food on plate">
+          <div class="dark-overlay"></div>
+          <div class="viewfinder">
+            <div class="vf tl"></div>
+            <div class="vf tr"></div>
+            <div class="vf bl"></div>
+            <div class="vf br"></div>
+          </div>
+        </div>
+        <div class="controls-dark">
+          <div class="pill-overlay pill-white">Point at anything — I'll figure it out</div>
+          <img class="gallery-icon" src="assets/Camera.png" alt="Gallery">
+          <div class="shutter-btn"></div>
+          <div class="auto-btn">Auto</div>
+          <div class="home-bar"></div>
+        </div>
+      </div>
+      <div class="screen-label">Food detected — Scanning<br>Blurred photo with viewfinder</div>
+    </div>
+
+    <!-- HP-3: Food Photo Confirmed -->
+    <div class="screen-wrapper">
+      <div class="phone light">
+        <div class="status-bar">
+          <span class="time">9:41</span>
+          <div class="notch"></div>
+          <span class="icons">
+            <span>●●●●</span>
+            <span>📶</span>
+            <span>🔋</span>
+          </span>
+        </div>
+        <div class="nav-bar">
+          <div class="nav-icon">←</div>
+          <div class="nav-title">Scan</div>
+          <div class="nav-icon"><svg width="20" height="20" viewBox="0 0 19.2 22.5" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2.2363 9.38659C2.46607 9.04194 2.93169 8.94882 3.27634 9.17858C3.62051 9.40848 3.71398 9.87417 3.48435 10.2186L1.53708 13.1385C1.49111 13.208 1.48833 13.3056 1.52732 13.3749C1.57671 13.4621 1.66879 13.5123 1.7529 13.5126H7.7529C8.16703 13.5127 8.5029 13.8484 8.5029 14.2626V20.7626C8.50315 20.8606 8.55778 20.9554 8.68845 21.0018C8.80556 21.0312 8.91968 20.9808 8.9697 20.9061L10.7461 18.2421C10.9759 17.8976 11.4415 17.8043 11.7861 18.0341C12.1302 18.2639 12.2236 18.7297 11.9941 19.0741L10.2177 21.7382C9.78892 22.3811 8.98699 22.6486 8.26755 22.4432C8.26054 22.4412 8.25302 22.4396 8.24607 22.4374C7.50662 22.2021 7.00319 21.5409 7.0029 20.7626V15.0126H1.7529C1.11781 15.0124 0.530267 14.6619 0.219699 14.1102C-0.101103 13.5399 -0.0643041 12.837 0.289035 12.3065L2.2363 9.38659ZM1.10544 2.41589C1.40531 2.1303 1.8803 2.14157 2.16599 2.44128L17.166 18.1913C17.4514 18.4912 17.4403 18.9662 17.1406 19.2518C16.8408 19.5373 16.3657 19.526 16.0801 19.2264L1.08005 3.47643C0.794482 3.17659 0.805789 2.70158 1.10544 2.41589ZM8.95603 0.773308C9.35808 0.170231 10.0879 -0.102683 10.7705 0.0350267L10.9062 0.0682298L10.9277 0.0740892C11.6671 0.309474 12.1697 0.970561 12.1699 1.74889V7.49889H17.4199C18.0553 7.49896 18.6435 7.84921 18.9541 8.40124C19.2747 8.97164 19.2373 9.67457 18.8838 10.2049L16.9375 13.1249C16.7077 13.4692 16.2419 13.5623 15.8974 13.3329C15.553 13.1031 15.46 12.6374 15.6894 12.2928L17.6357 9.37292C17.6819 9.30358 17.6853 9.20603 17.6465 9.13659C17.597 9.04896 17.5042 8.99897 17.4199 8.99889H11.4199C11.006 8.99872 10.6702 8.66277 10.6699 8.24889V1.74889C10.6698 1.65059 10.6157 1.55501 10.4843 1.50866C10.3673 1.47961 10.2539 1.53063 10.2041 1.60534L8.24704 4.54089C8.01726 4.88517 7.55151 4.97835 7.207 4.74889C6.86247 4.5192 6.76951 4.05347 6.999 3.70885L8.95603 0.773308Z" fill="currentColor"/></svg></div>
+        </div>
+        <div class="helper-text">Point at anything — I'll figure it out</div>
+        <div class="camera-black">
+          <img class="food-photo" src="https://www.figma.com/api/mcp/asset/5925eeb6-c598-4f19-8b17-1326c8397c8d" alt="Food on plate">
+          <div class="viewfinder">
+            <div class="vf tl"></div>
+            <div class="vf tr"></div>
+            <div class="vf bl"></div>
+            <div class="vf br"></div>
+          </div>
+        </div>
+        <div class="controls-dark">
+          <div class="pill-overlay pill-green">
+            <span class="dot"></span>
+            Food Photo
+          </div>
+          <img class="gallery-icon" src="assets/Camera.png" alt="Gallery">
+          <div class="shutter-btn"></div>
+          <div class="auto-btn">Auto</div>
+          <div class="home-bar"></div>
+        </div>
+      </div>
+      <div class="screen-label">Food photo confirmed<br>Green badge — ready to capture</div>
+    </div>
+
+    <!-- HP-4: Recipe Result -->
+    <div class="screen-wrapper">
+      <div class="phone light">
+        <div class="status-bar">
+          <span class="time">9:41</span>
+          <div class="notch"></div>
+          <span class="icons">
+            <span>●●●●</span>
+            <span>📶</span>
+            <span>🔋</span>
+          </span>
+        </div>
+        <div class="nav-bar">
+          <div class="nav-icon">✕</div>
+          <div class="nav-title">Recipe Result</div>
+          <div class="nav-icon" style="font-size: 14px;">Save</div>
+        </div>
+
+        <div class="content-area">
+          <div class="info-banner">
+            📷 Scanned from photo — check ingredients to make sure everything looks right.
+          </div>
+
+          <div class="result-header">
+            <div>
+              <h2>Grandma's Chicken Soup</h2>
+              <div class="source">📖 Scanned recipe • 6 servings</div>
+            </div>
+            <div class="badge-dark">4</div>
+          </div>
+
+          <div class="detail-section-title">Recipe details</div>
+          <div class="detail-row-card">
+            <span class="label">Prep time</span>
+            <span class="value">45 min</span>
+          </div>
+          <div class="detail-row-card">
+            <span class="label">Cook time</span>
+            <span class="value">45 min</span>
+          </div>
+          <div class="detail-row-card">
+            <span class="label">Serves</span>
+            <span class="value">6</span>
+          </div>
+
+          <div class="ingredients-hdr">
+            <h3>Ingredients</h3>
+            <span class="add-link">Add</span>
+          </div>
+
+          <div class="ingredient-row">
+            <div class="badge-dark sm">2</div>
+            <div class="ingredient-name">
+              Chicken breast
+              <div class="ingredient-detail">2 cups, diced</div>
+            </div>
+          </div>
+
+          <div class="ingredient-row">
+            <div class="badge-dark sm">0</div>
+            <div class="ingredient-name">
+              Carrots
+              <div class="ingredient-detail">3 medium, sliced</div>
+            </div>
+          </div>
+
+          <div class="ingredient-row">
+            <div class="badge-dark sm">3</div>
+            <div class="ingredient-name">
+              Egg noodles
+              <div class="ingredient-detail">200g</div>
+            </div>
+          </div>
+
+          <div class="ingredient-row">
+            <div class="badge-dark sm">0</div>
+            <div class="ingredient-name">
+              Celery
+              <div class="ingredient-detail">2 stalks, chopped</div>
+            </div>
+          </div>
+
+          <div class="ingredient-row">
+            <div class="badge-dark sm">2</div>
+            <div class="ingredient-name">
+              Butter
+              <div class="ingredient-detail">1 tbsp</div>
+            </div>
+          </div>
+
+          <div class="ingredient-row">
+            <div class="badge-dark sm">0</div>
+            <div class="ingredient-name">
+              Onion
+              <div class="ingredient-detail">1 medium, diced</div>
+            </div>
+          </div>
+
+          <button class="btn-primary">Track Recipe</button>
+          <button class="btn-secondary">Save to My Recipes</button>
+        </div>
+
+        <div class="home-indicator"></div>
+      </div>
+      <div class="screen-label">Recipe Result — Full view<br>Ingredients list with points badges</div>
+    </div>
+
+    <!-- HP-5: Menu Scanner — same as HP-3 but with yellow pill and menu photo -->
+    <div class="screen-wrapper">
+      <div class="phone light">
+        <div class="status-bar">
+          <span class="time">9:41</span>
+          <div class="notch"></div>
+          <span class="icons">
+            <span>●●●●</span>
+            <span>📶</span>
+            <span>🔋</span>
+          </span>
+        </div>
+        <div class="nav-bar">
+          <div class="nav-icon">←</div>
+          <div class="nav-title">Scan</div>
+          <div class="nav-icon"><svg width="20" height="20" viewBox="0 0 19.2 22.5" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2.2363 9.38659C2.46607 9.04194 2.93169 8.94882 3.27634 9.17858C3.62051 9.40848 3.71398 9.87417 3.48435 10.2186L1.53708 13.1385C1.49111 13.208 1.48833 13.3056 1.52732 13.3749C1.57671 13.4621 1.66879 13.5123 1.7529 13.5126H7.7529C8.16703 13.5127 8.5029 13.8484 8.5029 14.2626V20.7626C8.50315 20.8606 8.55778 20.9554 8.68845 21.0018C8.80556 21.0312 8.91968 20.9808 8.9697 20.9061L10.7461 18.2421C10.9759 17.8976 11.4415 17.8043 11.7861 18.0341C12.1302 18.2639 12.2236 18.7297 11.9941 19.0741L10.2177 21.7382C9.78892 22.3811 8.98699 22.6486 8.26755 22.4432C8.26054 22.4412 8.25302 22.4396 8.24607 22.4374C7.50662 22.2021 7.00319 21.5409 7.0029 20.7626V15.0126H1.7529C1.11781 15.0124 0.530267 14.6619 0.219699 14.1102C-0.101103 13.5399 -0.0643041 12.837 0.289035 12.3065L2.2363 9.38659ZM1.10544 2.41589C1.40531 2.1303 1.8803 2.14157 2.16599 2.44128L17.166 18.1913C17.4514 18.4912 17.4403 18.9662 17.1406 19.2518C16.8408 19.5373 16.3657 19.526 16.0801 19.2264L1.08005 3.47643C0.794482 3.17659 0.805789 2.70158 1.10544 2.41589ZM8.95603 0.773308C9.35808 0.170231 10.0879 -0.102683 10.7705 0.0350267L10.9062 0.0682298L10.9277 0.0740892C11.6671 0.309474 12.1697 0.970561 12.1699 1.74889V7.49889H17.4199C18.0553 7.49896 18.6435 7.84921 18.9541 8.40124C19.2747 8.97164 19.2373 9.67457 18.8838 10.2049L16.9375 13.1249C16.7077 13.4692 16.2419 13.5623 15.8974 13.3329C15.553 13.1031 15.46 12.6374 15.6894 12.2928L17.6357 9.37292C17.6819 9.30358 17.6853 9.20603 17.6465 9.13659C17.597 9.04896 17.5042 8.99897 17.4199 8.99889H11.4199C11.006 8.99872 10.6702 8.66277 10.6699 8.24889V1.74889C10.6698 1.65059 10.6157 1.55501 10.4843 1.50866C10.3673 1.47961 10.2539 1.53063 10.2041 1.60534L8.24704 4.54089C8.01726 4.88517 7.55151 4.97835 7.207 4.74889C6.86247 4.5192 6.76951 4.05347 6.999 3.70885L8.95603 0.773308Z" fill="currentColor"/></svg></div>
+        </div>
+        <div class="helper-text">Point at anything — I'll figure it out</div>
+        <div class="camera-black">
+          <img class="food-photo" src="menu-food.png" alt="Menu photo">
+          <div class="dark-overlay"></div>
+          <div class="viewfinder">
+            <div class="vf tl"></div>
+            <div class="vf tr"></div>
+            <div class="vf bl"></div>
+            <div class="vf br"></div>
+          </div>
+        </div>
+        <div class="controls-dark">
+          <div class="pill-overlay pill-yellow">
+            <span class="dot yellow"></span>
+            Menu Photo
+          </div>
+          <img class="gallery-icon" src="assets/Camera.png" alt="Gallery">
+          <div class="shutter-btn"></div>
+          <div class="auto-btn">Auto</div>
+          <div class="home-bar"></div>
+        </div>
+      </div>
+      <div class="screen-label">Menu photo confirmed<br>Yellow badge — ready to capture</div>
+    </div>
+
+    <!-- HP-6: Menu Result — scanned menu items from Tony's Italian Kitchen -->
+    <div class="screen-wrapper">
+      <div class="phone light">
+        <div class="status-bar">
+          <span class="time">9:41</span>
+          <div class="notch"></div>
+          <span class="icons">
+            <span>●●●●</span>
+            <span>📶</span>
+            <span>🔋</span>
+          </span>
+        </div>
+        <div class="nav-bar">
+          <div class="nav-icon">✕</div>
+          <div class="nav-title">Menu Result</div>
+          <div class="nav-icon"></div>
+        </div>
+
+        <div class="content-area">
+          <div class="restaurant-name">Tony's Italian Kitchen</div>
+          <div class="restaurant-source">🍕 Scanned menu</div>
+
+          <div class="sort-bar">
+            <span class="count">12 items found</span>
+            <span class="sort-btn">↕ Sort by points</span>
+          </div>
+
+          <div class="menu-item">
+            <div class="badge-dark sm">2</div>
+            <div class="menu-item-info">
+              <div class="menu-item-name">Garden Salad</div>
+              <div class="menu-item-desc">Mixed greens, tomatoes, vinaigrette</div>
+            </div>
+            <div class="menu-item-chevron">›</div>
+          </div>
+
+          <div class="menu-item">
+            <div class="badge-dark sm">3</div>
+            <div class="menu-item-info">
+              <div class="menu-item-name">Grilled Chicken Salad</div>
+              <div class="menu-item-desc">Chicken breast, romaine, light dressing</div>
+            </div>
+            <div class="menu-item-chevron">›</div>
+          </div>
+
+          <div class="menu-item">
+            <div class="badge-dark sm">4</div>
+            <div class="menu-item-info">
+              <div class="menu-item-name">Minestrone Soup</div>
+              <div class="menu-item-desc">Vegetables, beans, pasta in broth</div>
+            </div>
+            <div class="menu-item-chevron">›</div>
+          </div>
+
+          <div class="menu-item">
+            <div class="badge-dark sm">7</div>
+            <div class="menu-item-info">
+              <div class="menu-item-name">Margherita Pizza</div>
+              <div class="menu-item-desc">Tomato sauce, mozzarella, basil</div>
+            </div>
+            <div class="menu-item-chevron">›</div>
+          </div>
+
+          <div class="menu-item">
+            <div class="badge-dark sm">9</div>
+            <div class="menu-item-info">
+              <div class="menu-item-name">Chicken Parmesan</div>
+              <div class="menu-item-desc">Breaded chicken, marinara, mozzarella</div>
+            </div>
+            <div class="menu-item-chevron">›</div>
+          </div>
+
+          <div class="menu-item">
+            <div class="badge-dark sm">11</div>
+            <div class="menu-item-info">
+              <div class="menu-item-name">Spaghetti Bolognese</div>
+              <div class="menu-item-desc">Beef ragu, spaghetti, parmesan</div>
+            </div>
+            <div class="menu-item-chevron">›</div>
+          </div>
+
+          <div class="menu-item">
+            <div class="badge-dark sm">14</div>
+            <div class="menu-item-info">
+              <div class="menu-item-name">Fettuccine Alfredo</div>
+              <div class="menu-item-desc">Cream sauce, parmesan, fettuccine</div>
+            </div>
+            <div class="menu-item-chevron">›</div>
+          </div>
+
+          <div class="menu-item">
+            <div class="badge-dark sm">18</div>
+            <div class="menu-item-info">
+              <div class="menu-item-name">Deep Dish Pizza</div>
+              <div class="menu-item-desc">Sausage, peppers, thick crust</div>
+            </div>
+            <div class="menu-item-chevron">›</div>
+          </div>
+
+          <button class="btn-primary">Track Meal</button>
+        </div>
+
+        <div class="home-indicator"></div>
+      </div>
+      <div class="screen-label">Menu Result — Tony's Italian Kitchen<br>8 menu items with points badges</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- iOS camera-style frosted glass drawer -->
+<div class="drawer-backdrop" id="autoDrawer">
+  <div class="drawer" id="drawerPanel">
+    <div class="drawer-grid">
+      <div class="drawer-grid-item active" data-mode="auto">
+        <div class="drawer-circle">✦</div>
+        <div class="drawer-label">Auto</div>
+      </div>
+      <div class="drawer-grid-item" data-mode="food">
+        <div class="drawer-circle">🍽</div>
+        <div class="drawer-label">Food</div>
+      </div>
+      <div class="drawer-grid-item" data-mode="menu">
+        <div class="drawer-circle">📋</div>
+        <div class="drawer-label">Menu</div>
+      </div>
+      <div class="drawer-grid-item" data-mode="barcode">
+        <div class="drawer-circle">⊟</div>
+        <div class="drawer-label">Barcode</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+
+  // --- Setup ---
+  document.body.classList.add('prototype-mode');
+
+  var screens = document.querySelectorAll('.screen-wrapper');
+  var totalScreens = screens.length; // Now 6 screens
+  var currentScreen = 0;
+  var autoAdvanceTimer = null;
+
+  // --- Create Navigation Dots + Counter ---
+  var screenSection = document.querySelector('.screen-section');
+
+  var protoNav = document.createElement('div');
+  protoNav.classList.add('proto-nav');
+
+  var dotsContainer = document.createElement('div');
+  dotsContainer.classList.add('proto-dots');
+
+  for (var i = 0; i < totalScreens; i++) {
+    var dot = document.createElement('button');
+    dot.classList.add('proto-dot');
+    dot.setAttribute('aria-label', 'Go to screen ' + (i + 1));
+    dot.dataset.screen = i;
+    (function (idx) {
+      dot.addEventListener('click', function () { goToScreen(idx); });
+    })(i);
+    dotsContainer.appendChild(dot);
+  }
+
+  protoNav.appendChild(dotsContainer);
+
+  var protoCounter = document.createElement('div');
+  protoCounter.classList.add('proto-counter');
+  protoNav.appendChild(protoCounter);
+
+  screenSection.after(protoNav);
+
+  // --- Core Navigation ---
+  function goToScreen(index) {
+    if (index < 0 || index >= totalScreens) return;
+
+    // Clear any pending auto-advance timer
+    if (autoAdvanceTimer) {
+      clearTimeout(autoAdvanceTimer);
+      autoAdvanceTimer = null;
+    }
+
+    screens[currentScreen].classList.remove('active');
+    currentScreen = index;
+    screens[currentScreen].classList.add('active');
+
+    updateDots();
+    updateCounter();
+
+    // Screen 2 (index 1): auto-advance to screen 3 after 2s
+    if (currentScreen === 1) {
+      autoAdvanceTimer = setTimeout(function () {
+        goToScreen(2);
+      }, 2000);
+    }
+  }
+
+  function updateDots() {
+    var dots = dotsContainer.querySelectorAll('.proto-dot');
+    dots.forEach(function (dot, i) {
+      dot.classList.toggle('active', i === currentScreen);
+    });
+  }
+
+  function updateCounter() {
+    protoCounter.textContent = (currentScreen + 1) + ' / ' + totalScreens;
+  }
+
+  // --- Wire Up Interactive Elements ---
+
+  // Screen 1 (index 0): Shutter → Screen 2
+  var s1Shutter = screens[0].querySelector('.shutter-btn');
+  if (s1Shutter) s1Shutter.addEventListener('click', function () { goToScreen(1); });
+
+  // Screen 2 (index 1): Shutter → Screen 3 (skip auto-advance)
+  var s2Shutter = screens[1].querySelector('.shutter-btn');
+  if (s2Shutter) s2Shutter.addEventListener('click', function () { goToScreen(2); });
+
+  // Screen 3 (index 2): Shutter → Screen 4 (Recipe Result)
+  var s3Shutter = screens[2].querySelector('.shutter-btn');
+  if (s3Shutter) s3Shutter.addEventListener('click', function () { goToScreen(3); });
+
+  // Screen 4 (index 3): Close (✕) → Screen 1
+  screens[3].querySelectorAll('.nav-icon').forEach(function (icon) {
+    if (icon.textContent.trim() === '✕') {
+      icon.addEventListener('click', function () { goToScreen(0); });
+    }
+  });
+
+  // Screen 4 (index 3): Track Recipe → success flash, then Screen 1
+  var s4TrackBtn = screens[3].querySelector('.btn-primary');
+  if (s4TrackBtn) {
+    s4TrackBtn.addEventListener('click', function () {
+      var originalText = s4TrackBtn.textContent;
+      s4TrackBtn.textContent = '✓ Tracked!';
+      s4TrackBtn.classList.add('tracked');
+      setTimeout(function () {
+        s4TrackBtn.textContent = originalText;
+        s4TrackBtn.classList.remove('tracked');
+        goToScreen(0);
+      }, 1000);
+    });
+  }
+
+  // Screen 5 (index 4): Shutter → Screen 6 (Menu Result)
+  var s5Shutter = screens[4].querySelector('.shutter-btn');
+  if (s5Shutter) s5Shutter.addEventListener('click', function () { goToScreen(5); });
+
+  // Screen 6 (index 5): Close (✕) → Screen 1
+  screens[5].querySelectorAll('.nav-icon').forEach(function (icon) {
+    if (icon.textContent.trim() === '✕') {
+      icon.addEventListener('click', function () { goToScreen(0); });
+    }
+  });
+
+  // Screen 6 (index 5): Track Meal → success flash, then Screen 1
+  var s6TrackBtn = screens[5].querySelector('.btn-primary');
+  if (s6TrackBtn) {
+    s6TrackBtn.addEventListener('click', function () {
+      var originalText = s6TrackBtn.textContent;
+      s6TrackBtn.textContent = '✓ Tracked!';
+      s6TrackBtn.classList.add('tracked');
+      setTimeout(function () {
+        s6TrackBtn.textContent = originalText;
+        s6TrackBtn.classList.remove('tracked');
+        goToScreen(0);
+      }, 1000);
+    });
+  }
+
+  // Back arrows (← in scanner screens 1-5) → previous screen
+  for (var i = 0; i < 5; i++) {
+    (function (idx) {
+      screens[idx].querySelectorAll('.nav-icon').forEach(function (icon) {
+        if (icon.textContent.trim() === '←') {
+          icon.addEventListener('click', function () {
+            if (idx > 0) goToScreen(idx - 1);
+          });
+        }
+      });
+    })(i);
+  }
+
+  // Keyboard: Left/Right arrows
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'ArrowRight' && currentScreen < totalScreens - 1) {
+      goToScreen(currentScreen + 1);
+    } else if (e.key === 'ArrowLeft' && currentScreen > 0) {
+      goToScreen(currentScreen - 1);
+    }
+  });
+
+  // --- Auto Button → iOS Camera Drawer ---
+  var drawer = document.getElementById('autoDrawer');
+  var drawerPanel = document.getElementById('drawerPanel');
+  var autoBtns = document.querySelectorAll('.auto-btn');
+
+  function openDrawer() {
+    // Position the drawer at the bottom of the active screen's phone frame
+    var activeScreen = screens[currentScreen];
+    var phone = activeScreen.querySelector('.phone');
+    if (phone) {
+      var rect = phone.getBoundingClientRect();
+      drawerPanel.style.bottom = (window.innerHeight - rect.bottom + 12) + 'px';
+    }
+    drawer.classList.add('open');
+  }
+
+  function closeDrawer() {
+    drawer.classList.remove('open');
+  }
+
+  // Open from any Auto button
+  autoBtns.forEach(function(btn) {
+    btn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      openDrawer();
+    });
+  });
+
+  // Close on backdrop click (not on the panel itself)
+  drawer.addEventListener('click', function(e) {
+    if (e.target === drawer) closeDrawer();
+  });
+
+  // Escape closes drawer
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && drawer.classList.contains('open')) {
+      closeDrawer();
+    }
+  });
+
+  // Grid item selection — highlight active, update Auto buttons, close
+  var gridItems = drawer.querySelectorAll('.drawer-grid-item');
+  gridItems.forEach(function(item) {
+    item.addEventListener('click', function() {
+      gridItems.forEach(function(i) { i.classList.remove('active'); });
+      item.classList.add('active');
+      // Update all Auto button labels with the selected mode
+      var modeName = item.querySelector('.drawer-label').textContent;
+      autoBtns.forEach(function(btn) {
+        btn.textContent = modeName;
+      });
+      setTimeout(closeDrawer, 200);
+    });
+  });
+
+  // --- Initialize: Show Screen 1 ---
+  goToScreen(0);
+
+});
+</script>
+
+</body>
+</html>

@@ -1,0 +1,25 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(sleep 1:*)",
+      "mcp__plugin_figma_figma__get_design_context",
+      "Bash(cd:*)",
+      "Bash(head:*)",
+      "mcp__plugin_figma_figma__get_screenshot",
+      "Bash(ls:*)",
+      "Bash(echo:*)",
+      "Bash(wc:*)",
+      "Bash(curl:*)",
+      "WebSearch",
+      "Bash(ls -lh \"/Users/przemek/Documents/CLAUDE/Unified Photo Scanner/assets/menu-focus.jpg\" && sips -g pixelWidth -g pixelHeight \"/Users/przemek/Documents/CLAUDE/Unified Photo Scanner/assets/menu-focus.jpg\" 2>/dev/null)",
+      "Bash(sips:*)",
+      "WebFetch(domain:www.figma.com)",
+      "Bash(cd \"/Users/przemek/Documents/CLAUDE/Unified Photo Scanner\" && npx create-expo-app@latest SmartScanApp --template blank-typescript 2>&1)",
+      "Bash(cd \"/Users/przemek/Documents/CLAUDE/Unified Photo Scanner/SmartScanApp\" && npx expo install react-native-svg 2>&1)",
+      "Bash(cd \"/Users/przemek/Documents/CLAUDE/Unified Photo Scanner/SmartScanApp\" && npx expo install react-dom react-native-web 2>&1)",
+      "Bash(cd \"/Users/przemek/Documents/CLAUDE/Unified Photo Scanner/SmartScanApp\" && npx tsc --noEmit 2>&1)",
+      "Bash(gh auth:*)",
+      "WebFetch(domain:blog.logrocket.com)"
+    ]
+  }
+}

@@ -1,0 +1,2889 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>All Prototypes — Unified Photo Scanner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<!-- Geist font (used in Figma designs) -->
+<link href="https://cdn.jsdelivr.net/npm/geist@1.3.0/dist/fonts/geist-sans/style.css" rel="stylesheet">
+<style>
+/* =============================================
+   RESET & PAGE
+   ============================================= */
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background: #0A0B0F;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  color: #fff;
+  overflow-y: auto;
+  overflow-x: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* =============================================
+   SHARED: Section wrapper (each prototype block)
+   ============================================= */
+.proto-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 40px 0 80px;
+  border-bottom: 1px solid #1A1D2E;
+}
+.proto-wrapper:last-child {
+  border-bottom: none;
+}
+
+/* =============================================
+   SHARED: Section header
+   ============================================= */
+.proto-section {
+  text-align: center;
+  margin-bottom: 20px;
+}
+.proto-section h2 {
+  font-size: 22px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: -0.3px;
+}
+.proto-section .tap-hint {
+  font-size: 13px;
+  color: #555;
+  margin-top: 4px;
+}
+.proto-section .step-counter {
+  font-size: 13px;
+  color: #8B8D9E;
+  margin-top: 6px;
+}
+
+/* =============================================
+   SHARED: Progress dots
+   ============================================= */
+.progress-dots {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+.progress-dots .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #2A2D42;
+  transition: background 0.3s, transform 0.3s;
+}
+.progress-dots .dot.active {
+  background: #FFD60A;
+  transform: scale(1.25);
+}
+
+/* =============================================
+   SHARED: Phone frame
+   ============================================= */
+.phone-frame {
+  width: 393px;
+  height: 852px;
+  border-radius: 47px;
+  border: 2px solid #2A2D42;
+  background: #000;
+  overflow: hidden;
+  position: relative;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+/* =============================================
+   SHARED: Screen container (animated transitions)
+   ============================================= */
+
+/* Keyframes: result screens slide up like an iOS modal */
+@keyframes screen-slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(60px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Keyframes: tooltip slides in from below (first appearance) */
+@keyframes tooltip-slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+/* Keyframes: tooltip fades out then in (tooltip-to-tooltip transition) */
+@keyframes tooltip-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* Keyframes: camera shutter flash (white flash over camera area) */
+@keyframes shutter-flash {
+  0%   { opacity: 0; }
+  15%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* Screen 2: first tooltip — slides up into view */
+.screen:nth-child(2).active .tooltip {
+  animation: tooltip-slide-in 0.35s cubic-bezier(0.32, 0.72, 0, 1) 0.1s both;
+}
+
+/* Screen 3: second tooltip — fades in (replacing the previous one) */
+.screen:nth-child(3).active .tooltip {
+  animation: tooltip-fade-in 0.3s cubic-bezier(0.32, 0.72, 0, 1) both;
+}
+
+.screen {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+  will-change: opacity, transform;
+}
+
+.screen.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Result screens: slide up after a brief pause to let the camera flash show */
+.screen-result.active {
+  animation: screen-slide-up 0.4s cubic-bezier(0.32, 0.72, 0, 1) 0.2s both;
+}
+
+
+/* =============================================
+   SHARED: Status bar (white text)
+   ============================================= */
+.status-bar {
+  height: 54px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  padding: 0 28px 8px;
+}
+.status-bar .time {
+  font-size: 15px;
+  font-weight: 600;
+  color: #fff;
+}
+.status-bar .icons {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+/* Signal bars */
+.signal-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 1.5px;
+  height: 12px;
+}
+.signal-bars span {
+  width: 3px;
+  background: #fff;
+  border-radius: 1px;
+}
+.signal-bars span:nth-child(1) { height: 4px; }
+.signal-bars span:nth-child(2) { height: 6px; }
+.signal-bars span:nth-child(3) { height: 9px; }
+.signal-bars span:nth-child(4) { height: 12px; }
+/* WiFi icon */
+.wifi-icon {
+  width: 16px;
+  height: 12px;
+  position: relative;
+}
+.wifi-icon::before,
+.wifi-icon::after {
+  content: '';
+  position: absolute;
+  border: 2px solid #fff;
+  border-bottom: none;
+  border-radius: 50% 50% 0 0;
+}
+.wifi-icon::before {
+  width: 16px;
+  height: 10px;
+  bottom: 2px;
+  left: 0;
+}
+.wifi-icon::after {
+  width: 10px;
+  height: 6px;
+  bottom: 2px;
+  left: 3px;
+}
+.wifi-dot {
+  width: 3px;
+  height: 3px;
+  background: #fff;
+  border-radius: 50%;
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+}
+/* Battery */
+.battery {
+  width: 25px;
+  height: 12px;
+  border: 1.5px solid rgba(255,255,255,0.9);
+  border-radius: 3px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  padding: 2px;
+}
+.battery::after {
+  content: '';
+  position: absolute;
+  right: -4px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 2px;
+  height: 5px;
+  background: rgba(255,255,255,0.9);
+  border-radius: 0 1px 1px 0;
+}
+.battery-fill {
+  width: 75%;
+  height: 100%;
+  background: #fff;
+  border-radius: 1px;
+}
+
+/* =============================================
+   SHARED: Status bar (dark text for result screens)
+   ============================================= */
+.status-bar-dark .time { color: #1A1A1A; }
+.status-bar-dark .signal-bars span { background: #1A1A1A; }
+.status-bar-dark .wifi-icon::before,
+.status-bar-dark .wifi-icon::after { border-color: #1A1A1A; }
+.status-bar-dark .wifi-dot { background: #1A1A1A; }
+.status-bar-dark .battery { border-color: rgba(0,0,0,0.8); }
+.status-bar-dark .battery::after { background: rgba(0,0,0,0.8); }
+.status-bar-dark .battery-fill { background: #1A1A1A; }
+
+/* =============================================
+   SHARED: Scanner header
+   ============================================= */
+.scanner-header {
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  position: relative;
+}
+.scanner-header .back-arrow {
+  font-size: 28px;
+  color: #fff;
+  line-height: 1;
+}
+.scanner-header .title {
+  font-size: 17px;
+  font-weight: 600;
+  color: #fff;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+}
+.scanner-header .flash-icon svg {
+  display: block;
+}
+
+/* =============================================
+   SHARED: Instruction text
+   ============================================= */
+.instruction {
+  font-size: 13px;
+  color: #8B8D9E;
+  text-align: center;
+  padding: 6px 30px 10px;
+}
+
+/* =============================================
+   SHARED: Scanner top area — light header (Figma)
+   Background: #f4f4f4, all text/icons dark
+   ============================================= */
+.scanner-top {
+  background: #f4f4f4;
+}
+/* Dark status bar icons inside the light header */
+.scanner-top .time { color: #000; }
+.scanner-top .signal-bars span { background: #000; }
+.scanner-top .wifi-icon::before,
+.scanner-top .wifi-icon::after { border-color: #000; }
+.scanner-top .wifi-dot { background: #000; }
+.scanner-top .battery { border-color: rgba(0,0,0,0.8); }
+.scanner-top .battery::after { background: rgba(0,0,0,0.8); }
+.scanner-top .battery-fill { background: #000; }
+/* Dark header text */
+.scanner-top .back-arrow { color: #1A1A1A; }
+.scanner-top .title { color: #3b3b3b; }
+/* Instruction text on light background */
+.scanner-top .instruction { color: #6e6e73; }
+
+/* =============================================
+   SHARED: Camera area
+   ============================================= */
+.camera-area {
+  width: 100%;
+  height: 478px;
+  background: #000;
+  position: relative;
+  overflow: hidden;
+}
+
+/* =============================================
+   SHARED: Corner brackets
+   ============================================= */
+.corner-brackets {
+  position: absolute;
+  width: 290px;
+  height: 283px;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 5;
+  pointer-events: none;
+  /* Smooth height transition when brackets resize (e.g. barcode focus) */
+  transition: height 0.4s cubic-bezier(0.32, 0.72, 0, 1);
+}
+/* Corner brackets — use CSS borders with border-radius for rounded corners */
+.bracket {
+  position: absolute;
+  width: 35px;
+  height: 35px;
+}
+.bracket-tl { top: 0; left: 0; border-top: 3px solid #fff; border-left: 3px solid #fff; border-top-left-radius: 12px; }
+.bracket-tr { top: 0; right: 0; border-top: 3px solid #fff; border-right: 3px solid #fff; border-top-right-radius: 12px; }
+.bracket-bl { bottom: 0; left: 0; border-bottom: 3px solid #fff; border-left: 3px solid #fff; border-bottom-left-radius: 12px; }
+.bracket-br { bottom: 0; right: 0; border-bottom: 3px solid #fff; border-right: 3px solid #fff; border-bottom-right-radius: 12px; }
+
+/* =============================================
+   SHARED: Mode tabs
+   ============================================= */
+.mode-tabs {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 22px;
+  padding: 14px 0 10px;
+}
+.mode-tabs span {
+  font-size: 13px;
+  font-weight: 500;
+  color: #8B8D9E;
+}
+.mode-tabs span.active-tab {
+  color: #FFD60A;
+}
+
+/* =============================================
+   SHARED: Bottom controls
+   ============================================= */
+.bottom-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 40px 0;
+  position: relative;
+}
+.gallery-icon {
+  position: absolute;
+  left: 40px;
+}
+.shutter-btn {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  border: 4px solid #fff;
+  background: transparent;
+  position: relative;
+}
+.shutter-btn::after {
+  content: '';
+  position: absolute;
+  inset: 4px;
+  border-radius: 50%;
+  background: #fff;
+}
+
+/* =============================================
+   SHARED: Home indicator
+   ============================================= */
+.home-indicator {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 135px;
+  height: 5px;
+  border-radius: 3px;
+  background: rgba(255,255,255,0.3);
+}
+.home-indicator-dark {
+  background: rgba(0,0,0,0.2);
+}
+
+/* =============================================
+   SHARED: Tooltip (detect + recognized)
+   ============================================= */
+.tooltip {
+  position: absolute;
+  bottom: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 13px;
+  color: #fff;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  z-index: 10;
+  pointer-events: none;
+}
+.tooltip-detect {
+  background: rgba(0,0,0,0.7);
+  border: 1px solid #FFD60A;
+}
+.tooltip-recognized {
+  background: rgba(0,0,0,0.7);
+  border: 1px solid #34C759;
+}
+.tooltip .green-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #34C759;
+  flex-shrink: 0;
+}
+
+/* =============================================
+   SHARED: Result screen base
+   ============================================= */
+.screen-result {
+  background: #FAFAFA;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Result header */
+.result-header {
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  position: relative;
+}
+.result-header .close-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: #F0F0F0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  color: #1A1A1A;
+  font-weight: 500;
+  line-height: 1;
+}
+.result-header .result-title {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 16px;
+  font-weight: 600;
+  color: #1A1A1A;
+}
+.result-header .action-btn {
+  font-size: 14px;
+  font-weight: 600;
+  color: #4B6BFB;
+}
+.result-header .action-placeholder {
+  width: 30px;
+}
+
+/* Restaurant info (food + menu results) */
+.restaurant-info {
+  padding: 16px 20px 12px;
+}
+.restaurant-name {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1A1A1A;
+  line-height: 1.2;
+}
+.restaurant-meta {
+  font-size: 13px;
+  color: #8B8D9E;
+  margin-top: 4px;
+}
+
+/* Items header (food + menu results) */
+.items-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 20px 10px;
+}
+.items-count {
+  font-size: 13px;
+  color: #8B8D9E;
+}
+.sort-btn {
+  font-size: 13px;
+  color: #4B6BFB;
+  font-weight: 500;
+}
+
+/* Menu list (scrollable card list) */
+.menu-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 20px 90px;
+  -webkit-overflow-scrolling: touch;
+}
+.menu-card {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  margin-bottom: 12px;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.menu-card .number-circle {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #333;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  flex-shrink: 0;
+}
+.menu-card .card-content {
+  flex: 1;
+  min-width: 0;
+}
+.menu-card .card-name {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1A1A1A;
+  line-height: 1.3;
+}
+.menu-card .card-desc {
+  font-size: 13px;
+  color: #8B8D9E;
+  margin-top: 2px;
+  line-height: 1.3;
+}
+.menu-card .chevron {
+  font-size: 18px;
+  color: #C7C7CC;
+  flex-shrink: 0;
+  font-weight: 300;
+}
+
+/* =============================================
+   PROTOTYPE 1: BARCODE — Namespaced
+   ============================================= */
+
+/* Barcode photo in camera */
+#proto-barcode .barcode-photo-container {
+  position: absolute;
+  top: 0; left: 0; width: 100%; height: 100%;
+}
+
+/* Barcode result: Track Food */
+#proto-barcode .result-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 20px 40px;
+  -webkit-overflow-scrolling: touch;
+}
+#proto-barcode .product-section {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+#proto-barcode .product-info { flex: 1; }
+#proto-barcode .product-name {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1A1A1A;
+  margin-bottom: 6px;
+  line-height: 1.2;
+}
+#proto-barcode .product-meta {
+  font-size: 13px;
+  color: #8B8D9E;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+#proto-barcode .product-score {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #1A1A1A;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+  margin-left: 12px;
+}
+#proto-barcode .section-heading {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1A1A1A;
+  margin-bottom: 10px;
+}
+#proto-barcode .serving-card {
+  border: 1px solid #E5E5E5;
+  border-radius: 12px;
+  padding: 12px 25px;
+  margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+#proto-barcode .serving-card .serving-label {
+  font-size: 14px;
+  color: #8B8D9E;
+}
+#proto-barcode .serving-card .serving-value {
+  font-size: 14px;
+  font-weight: 500;
+  color: #1A1A1A;
+}
+#proto-barcode .insight-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #E8F5E9;
+  border-radius: 20px;
+  padding: 6px 12px;
+  font-size: 12px;
+  color: #2E7D32;
+  font-weight: 500;
+  margin-bottom: 24px;
+}
+#proto-barcode .nutrition-card {
+  background: #F5F5F5;
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 24px;
+}
+#proto-barcode .nutrition-card .section-heading {
+  padding-bottom: 12px;
+  border-bottom: 1px solid #E5E5E5;
+  margin-bottom: 0;
+}
+#proto-barcode .nutrition-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 11px 0;
+}
+#proto-barcode .nutrition-row .label {
+  font-size: 16px;
+  color: #1A1A1A;
+}
+#proto-barcode .nutrition-row .value {
+  font-size: 14px;
+  color: #666;
+}
+#proto-barcode .nutrition-row.sub .label {
+  font-size: 14px;
+  color: #666;
+  padding-left: 16px;
+}
+#proto-barcode .nutrition-separator {
+  height: 1px;
+  background: #E5E5E5;
+}
+/* =============================================
+   BARCODE: Figma design overrides
+   All scoped to #proto-barcode so other prototypes
+   are not affected.
+   ============================================= */
+
+/* --- Scanner header title: Geist SemiBold 16px --- */
+#proto-barcode .scanner-top .title {
+  font-family: 'Geist', 'Inter', sans-serif;
+  font-weight: 600;
+  font-size: 16px;
+  line-height: 20px;
+}
+
+/* --- Instruction text: Geist Regular 12px, black --- */
+#proto-barcode .scanner-top .instruction {
+  font-family: 'Geist', 'Inter', sans-serif;
+  font-weight: 400;
+  font-size: 12px;
+  color: #000;
+  letter-spacing: -0.2px;
+  line-height: 18px;
+}
+
+/* --- Mode tabs: Geist Medium 16px, spaced evenly --- */
+#proto-barcode .mode-tabs {
+  justify-content: space-between;
+  padding: 8px 16px;
+  gap: 0;
+  background: #08070c;
+}
+#proto-barcode .mode-tabs span {
+  font-family: 'Geist', 'Inter', sans-serif;
+  font-size: 16px;
+  font-weight: 500;
+  color: #fff;
+  line-height: 18px;
+  letter-spacing: -0.2px;
+}
+#proto-barcode .mode-tabs span.active-tab {
+  color: #ffe845;
+}
+
+/* --- Bottom controls: match dark background --- */
+#proto-barcode .bottom-controls {
+  background: #08070c;
+}
+
+/* --- Tooltip detect (screen 2): plain black pill, no border --- */
+#proto-barcode .tooltip-detect {
+  background: #000;
+  border: none;
+  padding: 5px 15px;
+  border-radius: 16px;
+  font-family: 'Inter', sans-serif;
+  font-weight: 500;
+  font-size: 12px;
+  color: #fff;
+}
+
+/* --- Tooltip recognized (screen 3): green border pill --- */
+#proto-barcode .tooltip-recognized {
+  background: #000;
+  border: 1px solid #34c759;
+  padding: 5px 15px;
+  border-radius: 16px;
+  font-family: 'Inter', sans-serif;
+  font-weight: 500;
+  font-size: 12px;
+  color: #34c759;
+  gap: 6px;
+}
+/* Green dot: smaller (6px) and semi-transparent */
+#proto-barcode .tooltip .green-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 3px;
+  opacity: 0.42;
+}
+
+/* --- Tighter viewfinder for screen 3 (barcode focused) --- */
+/* Figma: 290×204 at top:142px in 478px camera area (5px below center) */
+#proto-barcode .corner-brackets.brackets-tight {
+  height: 204px;
+  top: 142px;
+  transform: translateX(-50%);
+}
+
+/* --- Result screen background --- */
+#proto-barcode .screen-result {
+  background: #f4f4f4;
+}
+
+/* --- Result header: updated per Figma --- */
+#proto-barcode .result-header {
+  height: 56px;
+  padding: 0 20px;
+}
+#proto-barcode .result-header .close-btn {
+  width: 36px;
+  height: 36px;
+  background: transparent;
+  font-family: 'Inter', 'Noto Sans', sans-serif;
+  font-weight: 400;
+  font-size: 20px;
+  color: #3b3b3b;
+}
+#proto-barcode .result-header .result-title {
+  font-family: 'Inter', sans-serif;
+  font-weight: 700;
+  font-size: 18px;
+  color: #3b3b3b;
+}
+
+/* --- Product name: Inter Bold 22px --- */
+#proto-barcode .product-name {
+  font-family: 'Inter', sans-serif;
+  font-weight: 700;
+  font-size: 22px;
+  color: #3b3b3b;
+  line-height: 28.6px;
+  margin-bottom: 4px;
+}
+
+/* --- Product meta: Inter Regular 13px --- */
+#proto-barcode .product-meta {
+  font-family: 'Inter', sans-serif;
+  font-weight: 400;
+  font-size: 13px;
+  color: #8b8d9e;
+}
+
+/* --- Product score circle: #3b3b3b, 18px text --- */
+#proto-barcode .product-score {
+  background: #3b3b3b;
+  width: 48px;
+  height: 48px;
+  border-radius: 24px;
+  font-family: 'Inter', sans-serif;
+  font-weight: 700;
+  font-size: 18px;
+}
+
+/* --- Section heading: Inter Bold 16px --- */
+#proto-barcode .section-heading {
+  font-family: 'Inter', sans-serif;
+  font-weight: 700;
+  font-size: 16px;
+  color: #000;
+}
+
+/* --- Serving card: dark border, Geist fonts --- */
+#proto-barcode .serving-card {
+  border: 1px solid #3b3b3b;
+  border-radius: 16px;
+  padding: 12px 25px;
+  height: 59px;
+  background: #fff;
+}
+#proto-barcode .serving-card .serving-label {
+  font-family: 'Geist', 'Inter', sans-serif;
+  font-weight: 500;
+  font-size: 16px;
+  color: #08070c;
+  line-height: 20px;
+}
+#proto-barcode .serving-card .serving-value {
+  font-family: 'Geist', 'Inter', sans-serif;
+  font-weight: 400;
+  font-size: 16px;
+  color: #08070c;
+  line-height: 24px;
+}
+
+/* --- Nutritional insights: white card wrapper --- */
+#proto-barcode .insights-card {
+  background: #fff;
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 12px;
+}
+#proto-barcode .insights-card .section-heading {
+  font-family: 'Geist', 'Inter', sans-serif;
+  font-weight: 500;
+  font-size: 16px;
+  color: #08070c;
+  letter-spacing: -0.31px;
+  line-height: 24px;
+  margin-bottom: 8px;
+}
+/* Insight tag: Figma green colors and small radius */
+#proto-barcode .insight-tag {
+  background: #e1f1b2;
+  border-radius: 4px;
+  padding: 4px 8px 4px 6px;
+  font-family: 'Geist', 'Inter', sans-serif;
+  font-weight: 500;
+  font-size: 12px;
+  color: #172e00;
+  line-height: 16px;
+  margin-bottom: 0;
+}
+
+/* --- Nutrition card: white bg, updated separators --- */
+#proto-barcode .nutrition-card {
+  background: #fff;
+  border-radius: 16px;
+  padding: 16px;
+}
+#proto-barcode .nutrition-card .section-heading {
+  font-family: 'Geist', 'Inter', sans-serif;
+  font-weight: 500;
+  font-size: 16px;
+  color: #08070c;
+  letter-spacing: -0.31px;
+  line-height: 24px;
+  padding-bottom: 8px;
+  border-bottom: 0.5px solid #d1d1e4;
+}
+/* Separators: thinner and lighter color */
+#proto-barcode .nutrition-separator {
+  height: 0.5px;
+  background: #d1d1e4;
+}
+/* Indented separator for sub-items */
+#proto-barcode .nutrition-separator.indented {
+  margin-left: 24px;
+}
+/* Nutrition row labels and values: Geist Medium 14px */
+#proto-barcode .nutrition-row {
+  padding: 4px 0;
+}
+#proto-barcode .nutrition-row .label {
+  font-family: 'Geist', 'Inter', sans-serif;
+  font-weight: 500;
+  font-size: 14px;
+  color: #08070c;
+  letter-spacing: -0.31px;
+  line-height: 24px;
+}
+#proto-barcode .nutrition-row .value {
+  font-family: 'Geist', 'Inter', sans-serif;
+  font-weight: 500;
+  font-size: 14px;
+  color: #08070c;
+  letter-spacing: -0.15px;
+  line-height: 18px;
+}
+/* Sub rows: Geist Regular, indented 24px */
+#proto-barcode .nutrition-row.sub .label {
+  font-family: 'Geist', 'Inter', sans-serif;
+  font-weight: 400;
+  font-size: 14px;
+  color: #08070c;
+  padding-left: 24px;
+}
+
+/* --- Track button: blue, full-width at bottom --- */
+#proto-barcode .track-btn {
+  background: #4b6bfb;
+  border-radius: 12px;
+  padding: 16px;
+  width: 100%;
+  font-family: 'Geist', 'Inter', sans-serif;
+  font-weight: 600;
+  font-size: 16px;
+  color: #fff;
+  text-align: center;
+  border: none;
+  cursor: pointer;
+  margin-top: 16px;
+}
+
+#proto-barcode .bookmark-icon svg {
+  width: 20px;
+  height: 20px;
+  stroke: #1A1A1A;
+  fill: none;
+  stroke-width: 1.5;
+}
+
+/* =============================================
+   PROTOTYPE 2: FOOD — Namespaced
+   ============================================= */
+
+/* Food photo in camera */
+#proto-food .food-photo-container {
+  position: absolute;
+  top: 0; left: 0; width: 100%; height: 100%;
+}
+
+/* =============================================
+   FOOD: Figma design overrides (result screen)
+   All scoped to #proto-food so other prototypes
+   are not affected.
+   ============================================= */
+
+/* --- Result screen background --- */
+#proto-food .screen-result {
+  background: #f4f4f4;
+}
+
+/* --- Result header: ✕ / Lunch / Track --- */
+#proto-food .result-header {
+  height: 56px;
+  padding: 0 20px;
+}
+#proto-food .result-header .close-btn {
+  width: 36px;
+  height: 36px;
+  background: transparent;
+  font-family: 'Inter', 'Noto Sans', sans-serif;
+  font-weight: 400;
+  font-size: 20px;
+  color: #3b3b3b;
+}
+#proto-food .result-header .result-title {
+  font-family: 'Inter', sans-serif;
+  font-weight: 700;
+  font-size: 18px;
+  color: #3b3b3b;
+}
+#proto-food .result-header .action-btn {
+  font-family: 'Inter', sans-serif;
+  font-weight: 400;
+  font-size: 14px;
+  color: #3b3b3b;
+}
+
+/* --- Scrollable result body --- */
+#proto-food .food-result-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 21px 30px;
+  -webkit-overflow-scrolling: touch;
+}
+#proto-food .food-result-body::-webkit-scrollbar { display: none; }
+
+/* --- Instruction paragraph --- */
+#proto-food .food-instruction {
+  font-family: 'Inter', sans-serif;
+  font-weight: 400;
+  font-size: 14px;
+  color: #3b3b3b;
+  line-height: 20px;
+  margin-bottom: 16px;
+}
+
+/* --- Section label (e.g. "Food photo") --- */
+#proto-food .food-section-label {
+  font-family: 'Inter', sans-serif;
+  font-weight: 400;
+  font-size: 13px;
+  color: #3b3b3b;
+  margin-bottom: 12px;
+  padding-top: 4px;
+}
+
+/* --- Food item cards --- */
+#proto-food .food-item-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 12px;
+}
+/* Points circle on each card */
+#proto-food .food-item-card .pts-circle {
+  width: 32px;
+  height: 32px;
+  border-radius: 16px;
+  background: #3b3b3b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+#proto-food .food-item-card .pts-circle span {
+  font-family: 'Inter', sans-serif;
+  font-weight: 700;
+  font-size: 13px;
+  color: #fff;
+}
+/* Item text */
+#proto-food .food-item-card .item-info {
+  flex: 1;
+  min-width: 0;
+}
+#proto-food .food-item-card .item-name {
+  font-family: 'Geist', 'Inter', sans-serif;
+  font-weight: 500;
+  font-size: 15px;
+  color: #3b3b3b;
+  line-height: 1.3;
+}
+#proto-food .food-item-card .item-amount {
+  font-family: 'Geist', 'Inter', sans-serif;
+  font-weight: 400;
+  font-size: 12px;
+  color: #3b3b3b;
+  margin-top: 2px;
+}
+
+/* --- "Missing an item" prompt --- */
+#proto-food .missing-prompt {
+  font-family: 'Inter', sans-serif;
+  font-weight: 400;
+  font-size: 14px;
+  color: #3b3b3b;
+  text-align: center;
+  line-height: 20px;
+  margin: 20px 0 12px;
+}
+
+/* --- "Add new food" outlined button --- */
+#proto-food .add-food-btn {
+  display: block;
+  width: 100%;
+  border: 2px solid #477bff;
+  border-radius: 12px;
+  padding: 18px 14px;
+  background: transparent;
+  font-family: 'Geist', 'Inter', sans-serif;
+  font-weight: 500;
+  font-size: 14px;
+  color: #4b6bfb;
+  text-align: center;
+  cursor: pointer;
+}
+
+/* --- "Track Recipe" blue button --- */
+#proto-food .track-recipe-btn {
+  display: block;
+  width: 100%;
+  background: #4b6bfb;
+  border-radius: 12px;
+  padding: 16px;
+  border: none;
+  font-family: 'Geist', 'Inter', sans-serif;
+  font-weight: 600;
+  font-size: 16px;
+  color: #fff;
+  text-align: center;
+  cursor: pointer;
+  margin-top: 16px;
+}
+
+/* --- Shutter flash + loading (food & menu prototypes) --- */
+
+/* White overlay on camera area for shutter flash, hidden by default */
+#proto-food .camera-area::after,
+#proto-menu .camera-area::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: #fff;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 10;
+}
+/* When .shutter-flash class is added, play the flash animation */
+#proto-food .camera-area.shutter-flash::after,
+#proto-menu .camera-area.shutter-flash::after {
+  animation: shutter-flash 0.35s ease-out forwards;
+}
+
+/* Loading overlay — shared styles for food & menu */
+#proto-food .loading-overlay,
+#proto-menu .loading-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  z-index: 12;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+#proto-food .loading-overlay.visible,
+#proto-menu .loading-overlay.visible {
+  opacity: 1;
+}
+#proto-food .loading-spinner,
+#proto-menu .loading-spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid rgba(255, 255, 255, 0.25);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spinner-rotate 0.8s linear infinite;
+}
+#proto-food .loading-label,
+#proto-menu .loading-label {
+  font-family: 'Geist', 'Inter', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  color: #fff;
+}
+
+/* =============================================
+   PROTOTYPE 3: MENU — Namespaced
+   ============================================= */
+
+/* Menu photo in camera */
+#proto-menu .menu-photo-container {
+  position: absolute;
+  top: 0; left: 0; width: 100%; height: 100%;
+}
+
+/* =============================================
+   PROTOTYPE 4: RECIPE — Namespaced
+   ============================================= */
+
+/* Recipe photo in camera */
+#proto-recipe .recipe-photo-container {
+  position: absolute;
+  top: 0; left: 0; width: 100%; height: 100%;
+}
+
+/* Recipe result page */
+#proto-recipe .result-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 20px 0;
+  -webkit-overflow-scrolling: touch;
+}
+#proto-recipe .result-body::-webkit-scrollbar { display: none; }
+
+#proto-recipe .info-banner {
+  background: #F5F5F5;
+  border-radius: 12px;
+  padding: 15px 16px;
+  margin-bottom: 20px;
+}
+#proto-recipe .info-banner p {
+  font-size: 13px;
+  color: #8B8D9E;
+  line-height: 1.45;
+}
+
+#proto-recipe .recipe-title-area {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+#proto-recipe .recipe-title-area .left h2 {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1A1A1A;
+  margin-bottom: 4px;
+}
+#proto-recipe .recipe-title-area .left .meta {
+  font-size: 13px;
+  color: #8B8D9E;
+}
+#proto-recipe .score-circle {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #333;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+#proto-recipe .score-circle span {
+  font-size: 22px;
+  font-weight: 700;
+  color: #fff;
+}
+
+#proto-recipe .section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+#proto-recipe .section-heading h3 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1A1A1A;
+}
+#proto-recipe .section-heading .add-link {
+  font-size: 14px;
+  font-weight: 600;
+  color: #4B6BFB;
+}
+
+#proto-recipe .detail-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border: 1px solid #E5E5E5;
+  border-radius: 12px;
+  padding: 12px 25px;
+  margin-bottom: 12px;
+  background: #fff;
+}
+#proto-recipe .detail-card .label {
+  font-size: 15px;
+  font-weight: 500;
+  color: #1A1A1A;
+}
+#proto-recipe .detail-card .value {
+  font-size: 15px;
+  font-weight: 500;
+  color: #666;
+}
+
+#proto-recipe .ingredient-card {
+  display: flex;
+  align-items: center;
+  background: #fff;
+  border-radius: 16px;
+  padding: 13px 16px;
+  margin-bottom: 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+#proto-recipe .ingredient-card .pts {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #333;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-right: 12px;
+}
+#proto-recipe .ingredient-card .pts span {
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+}
+#proto-recipe .ingredient-card .info {
+  flex: 1;
+  min-width: 0;
+}
+#proto-recipe .ingredient-card .info .name {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1A1A1A;
+}
+#proto-recipe .ingredient-card .info .amount {
+  font-size: 13px;
+  color: #8B8D9E;
+  margin-top: 1px;
+}
+#proto-recipe .ingredient-card .chevron {
+  font-size: 20px;
+  color: #C0C0C0;
+  flex-shrink: 0;
+  margin-left: 8px;
+  font-weight: 300;
+}
+
+#proto-recipe .bottom-buttons {
+  padding: 20px 0 10px;
+}
+#proto-recipe .btn-track {
+  width: 100%;
+  padding: 16px;
+  border-radius: 12px;
+  background: #333;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 600;
+  border: none;
+  font-family: 'Inter', sans-serif;
+  cursor: pointer;
+  margin-bottom: 10px;
+}
+#proto-recipe .btn-save-recipe {
+  width: 100%;
+  padding: 12px;
+  border-radius: 12px;
+  background: transparent;
+  color: #1A1A1A;
+  font-size: 16px;
+  font-weight: 600;
+  border: 1px solid #E5E5E5;
+  font-family: 'Inter', sans-serif;
+  cursor: pointer;
+}
+
+/* --- Shutter flash + loading state (recipe prototype only) --- */
+
+/* White overlay on camera area for shutter flash, hidden by default */
+#proto-recipe .camera-area::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: #fff;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 10;
+}
+/* When .shutter-flash class is added, play the flash animation */
+#proto-recipe .camera-area.shutter-flash::after {
+  animation: shutter-flash 0.35s ease-out forwards;
+}
+
+/* Loading overlay — sits on top of camera area, hidden by default */
+#proto-recipe .loading-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  z-index: 12;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+/* Show the overlay when active */
+#proto-recipe .loading-overlay.visible {
+  opacity: 1;
+}
+
+/* Spinner ring */
+#proto-recipe .loading-spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid rgba(255, 255, 255, 0.25);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spinner-rotate 0.8s linear infinite;
+}
+@keyframes spinner-rotate {
+  to { transform: rotate(360deg); }
+}
+
+/* Loading label text */
+#proto-recipe .loading-label {
+  font-family: 'Geist', 'Inter', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  color: #fff;
+}
+
+/* =============================================
+   BARCODE: Scan result drawer (bottom sheet)
+   ============================================= */
+
+/* Drawer slides up from below */
+@keyframes drawer-slide-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+/* On the screen with the drawer, hide mode tabs and controls
+   so the camera image flows directly into the drawer */
+#proto-barcode .screen:has(.scan-drawer) .mode-tabs,
+#proto-barcode .screen:has(.scan-drawer) .bottom-controls {
+  display: none;
+}
+
+/* The drawer container — iOS frosted glass style,
+   covers mode tabs + controls + home indicator (full bottom area) */
+#proto-barcode .scan-drawer {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 218px;
+  background: rgba(30, 30, 30, 0.75);
+  -webkit-backdrop-filter: blur(40px);
+  backdrop-filter: blur(40px);
+  border-radius: 20px 20px 0 0;
+  padding: 12px 20px 30px;
+  z-index: 20;
+  /* Hidden by default, animated in when screen is active */
+  transform: translateY(100%);
+}
+
+/* Slide drawer up when its parent screen becomes active */
+.screen.active .scan-drawer {
+  animation: drawer-slide-up 0.4s cubic-bezier(0.32, 0.72, 0, 1) 0.2s both;
+}
+
+/* Drag handle pill */
+#proto-barcode .drawer-handle {
+  width: 36px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 2px;
+  margin: 0 auto 16px;
+}
+
+/* "RESULT(S)" label */
+#proto-barcode .drawer-label {
+  font-family: 'Inter', sans-serif;
+  font-weight: 600;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.5);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 12px;
+}
+
+/* Product result card inside the drawer */
+#proto-barcode .drawer-card {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+/* Blue score circle */
+#proto-barcode .drawer-card .drawer-score {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #4B6BFB;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+#proto-barcode .drawer-card .drawer-score span {
+  font-family: 'Inter', sans-serif;
+  font-weight: 700;
+  font-size: 18px;
+  color: #fff;
+}
+
+/* Product name + amount */
+#proto-barcode .drawer-card .drawer-info {
+  flex: 1;
+  min-width: 0;
+}
+#proto-barcode .drawer-card .drawer-name {
+  font-family: 'Geist', 'Inter', sans-serif;
+  font-weight: 500;
+  font-size: 15px;
+  color: #fff;
+  line-height: 1.3;
+}
+#proto-barcode .drawer-card .drawer-amount {
+  font-family: 'Geist', 'Inter', sans-serif;
+  font-weight: 400;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.5);
+  margin-top: 3px;
+}
+
+/* Blue "+" add button */
+#proto-barcode .drawer-card .drawer-add {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #4B6BFB;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+#proto-barcode .drawer-card .drawer-add span {
+  font-size: 22px;
+  color: #fff;
+  font-weight: 300;
+  line-height: 1;
+}
+
+/* =============================================
+   CAMERA FLASH EFFECT (food, menu, recipe — screen 3)
+   ============================================= */
+
+/* =============================================
+   RESPONSIVE SCALING
+   ============================================= */
+@media (max-width: 900px) {
+  .phone-frame {
+    transform: scale(0.85);
+    transform-origin: top center;
+  }
+  /* Reduce wrapper padding to compensate for scaled phone */
+  .proto-wrapper {
+    padding-bottom: calc(80px - 852px * 0.15);
+  }
+}
+@media (max-width: 500px) {
+  .phone-frame {
+    transform: scale(0.7);
+    transform-origin: top center;
+  }
+  .proto-wrapper {
+    padding-bottom: calc(80px - 852px * 0.3);
+  }
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════
+     PROTOTYPE 1: SCAN A BARCODE
+     ═══════════════════════════════════════════════════ -->
+<div class="proto-wrapper" id="proto-barcode">
+
+  <!-- Section header -->
+  <div class="proto-section">
+    <h2>Scan a barcode</h2>
+    <div class="tap-hint">Tap to advance</div>
+    <div class="step-counter">Step 1 of 4</div>
+  </div>
+
+  <!-- Progress dots -->
+  <div class="progress-dots">
+    <div class="dot active"></div>
+    <div class="dot"></div>
+    <div class="dot"></div>
+    <div class="dot"></div>
+  </div>
+
+  <!-- Phone frame -->
+  <div class="phone-frame">
+
+    <!-- SCREEN 1: Empty Scanner -->
+    <div class="screen active">
+      <div class="scanner-top">
+        <div class="status-bar">
+          <span class="time">9:41</span>
+          <div class="icons">
+            <div class="signal-bars"><span></span><span></span><span></span><span></span></div>
+            <div class="wifi-icon"><div class="wifi-dot"></div></div>
+            <div class="battery"><div class="battery-fill"></div></div>
+          </div>
+        </div>
+        <div class="scanner-header">
+          <span class="back-arrow">&larr;</span>
+          <span class="title">Scan</span>
+          <span class="flash-icon">
+            <img src="assets/flash-off.svg" alt="Flash off" style="width: 20px; height: 22px; display: block;">
+          </span>
+        </div>
+        <div class="instruction">Scan a menu, food, recipe, or barcode to get started.</div>
+      </div>
+      <div class="camera-area">
+        <div class="corner-brackets">
+          <div class="bracket bracket-tl"></div>
+          <div class="bracket bracket-tr"></div>
+          <div class="bracket bracket-bl"></div>
+          <div class="bracket bracket-br"></div>
+        </div>
+      </div>
+      <div class="mode-tabs">
+        <span>Barcode</span>
+        <span>Food</span>
+        <span class="active-tab">Auto</span>
+        <span>Recipe</span>
+        <span>Menu</span>
+      </div>
+      <div class="bottom-controls">
+        <div class="gallery-icon"><img src="assets/Camera.png" alt="Gallery" style="width: 30px; height: 30px; border-radius: 6px; object-fit: cover;"></div>
+        <div class="shutter-btn"></div>
+      </div>
+      <div class="home-indicator"></div>
+    </div>
+
+    <!-- SCREEN 2: Barcode Detected -->
+    <div class="screen">
+      <div class="scanner-top">
+        <div class="status-bar">
+          <span class="time">9:41</span>
+          <div class="icons">
+            <div class="signal-bars"><span></span><span></span><span></span><span></span></div>
+            <div class="wifi-icon"><div class="wifi-dot"></div></div>
+            <div class="battery"><div class="battery-fill"></div></div>
+          </div>
+        </div>
+        <div class="scanner-header">
+          <span class="back-arrow">&larr;</span>
+          <span class="title">Scan</span>
+          <span class="flash-icon">
+            <img src="assets/flash-off.svg" alt="Flash off" style="width: 20px; height: 22px; display: block;">
+          </span>
+        </div>
+        <div class="instruction">Scan a menu, food, recipe, or barcode to get started.</div>
+      </div>
+      <div class="camera-area">
+        <div class="barcode-photo-container">
+          <img src="assets/barcode-photo.jpg" alt="Barcode" style="width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0;">
+        </div>
+        <div class="corner-brackets">
+          <div class="bracket bracket-tl"></div>
+          <div class="bracket bracket-tr"></div>
+          <div class="bracket bracket-bl"></div>
+          <div class="bracket bracket-br"></div>
+        </div>
+        <div class="tooltip tooltip-detect">Point at anything &mdash; I'll figure it out</div>
+      </div>
+      <div class="mode-tabs">
+        <span>Barcode</span>
+        <span>Food</span>
+        <span class="active-tab">Auto</span>
+        <span>Recipe</span>
+        <span>Menu</span>
+      </div>
+      <div class="bottom-controls">
+        <div class="gallery-icon"><img src="assets/Camera.png" alt="Gallery" style="width: 30px; height: 30px; border-radius: 6px; object-fit: cover;"></div>
+        <div class="shutter-btn"></div>
+      </div>
+      <div class="home-indicator"></div>
+    </div>
+
+    <!-- SCREEN 3: Barcode Recognized -->
+    <div class="screen">
+      <div class="scanner-top">
+        <div class="status-bar">
+          <span class="time">9:41</span>
+          <div class="icons">
+            <div class="signal-bars"><span></span><span></span><span></span><span></span></div>
+            <div class="wifi-icon"><div class="wifi-dot"></div></div>
+            <div class="battery"><div class="battery-fill"></div></div>
+          </div>
+        </div>
+        <div class="scanner-header">
+          <span class="back-arrow">&larr;</span>
+          <span class="title">Scan</span>
+          <span class="flash-icon">
+            <img src="assets/flash-off.svg" alt="Flash off" style="width: 20px; height: 22px; display: block;">
+          </span>
+        </div>
+        <div class="instruction">Scan a menu, food, recipe, or barcode to get started.</div>
+      </div>
+      <div class="camera-area">
+        <div class="barcode-photo-container">
+          <img src="assets/barcode-photo.jpg" alt="Barcode" style="width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0;">
+        </div>
+        <!-- Tighter viewfinder for barcode focus (204px height per Figma) -->
+        <div class="corner-brackets brackets-tight">
+          <div class="bracket bracket-tl"></div>
+          <div class="bracket bracket-tr"></div>
+          <div class="bracket bracket-bl"></div>
+          <div class="bracket bracket-br"></div>
+        </div>
+        <div class="tooltip tooltip-recognized">
+          <span class="green-dot"></span>
+          Barcode
+        </div>
+      </div>
+      <div class="mode-tabs">
+        <span>Barcode</span>
+        <span>Food</span>
+        <span class="active-tab">Auto</span>
+        <span>Recipe</span>
+        <span>Menu</span>
+      </div>
+      <div class="bottom-controls">
+        <div class="gallery-icon"><img src="assets/Camera.png" alt="Gallery" style="width: 30px; height: 30px; border-radius: 6px; object-fit: cover;"></div>
+        <div class="shutter-btn"></div>
+      </div>
+      <!-- Bottom drawer that slides up over the controls -->
+      <div class="scan-drawer">
+        <div class="drawer-handle"></div>
+        <div class="drawer-label">Result(s)</div>
+        <div class="drawer-card">
+          <div class="drawer-score"><span>8</span></div>
+          <div class="drawer-info">
+            <div class="drawer-name">Chocolove Dark Chocolate, Ginger Crystallized</div>
+            <div class="drawer-amount">&frac13; bar(s)</div>
+          </div>
+          <div class="drawer-add"><span>+</span></div>
+        </div>
+      </div>
+      <div class="home-indicator"></div>
+    </div>
+
+    <!-- SCREEN 4: Track Food Result -->
+    <div class="screen screen-result">
+      <div class="status-bar status-bar-dark">
+        <span class="time">9:41</span>
+        <div class="icons">
+          <div class="signal-bars"><span></span><span></span><span></span><span></span></div>
+          <div class="wifi-icon"><div class="wifi-dot"></div></div>
+          <div class="battery"><div class="battery-fill"></div></div>
+        </div>
+      </div>
+      <div class="result-header">
+        <div class="close-btn">&times;</div>
+        <span class="result-title">Track food</span>
+        <div class="bookmark-icon">
+          <svg viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+        </div>
+      </div>
+      <div class="result-content">
+        <div class="product-section">
+          <div class="product-info">
+            <div class="product-name">Grandma's Chicken Soup</div>
+            <div class="product-meta">
+              <span>&#x1F4D6;</span>
+              <span>Barcode &bull; 1 servings</span>
+            </div>
+          </div>
+          <div class="product-score">4</div>
+        </div>
+
+        <div class="section-heading">Recipe details</div>
+        <div class="serving-card">
+          <span class="serving-label">Serving</span>
+          <span class="serving-value">2 servings</span>
+        </div>
+
+        <!-- Nutritional insights: wrapped in white card per Figma -->
+        <div class="insights-card">
+          <div class="section-heading">Nutritional insights</div>
+          <div class="insight-tag">&#x1F966; Higher source of fiber</div>
+        </div>
+
+        <!-- Nutritional information: white bg, updated separators per Figma -->
+        <div class="nutrition-card">
+          <div class="section-heading">Nutritional information</div>
+          <div class="nutrition-row">
+            <span class="label">Calories</span>
+            <span class="value">250 cal</span>
+          </div>
+          <div class="nutrition-separator"></div>
+          <div class="nutrition-row">
+            <span class="label">Protein</span>
+            <span class="value">14 g</span>
+          </div>
+          <div class="nutrition-separator"></div>
+          <div class="nutrition-row">
+            <span class="label">Fat</span>
+            <span class="value">15 g</span>
+          </div>
+          <!-- Sub-item separator is indented per Figma -->
+          <div class="nutrition-separator indented"></div>
+          <div class="nutrition-row sub">
+            <span class="label">Saturated fat</span>
+            <span class="value">3 g</span>
+          </div>
+          <div class="nutrition-separator"></div>
+          <div class="nutrition-row">
+            <span class="label">Carbohydrates</span>
+            <span class="value">15 g</span>
+          </div>
+          <div class="nutrition-separator indented"></div>
+          <div class="nutrition-row sub">
+            <span class="label">Fiber</span>
+            <span class="value">1 g</span>
+          </div>
+          <div class="nutrition-separator indented"></div>
+          <div class="nutrition-row sub">
+            <span class="label">Total sugar</span>
+            <span class="value">0 g</span>
+          </div>
+          <div class="nutrition-separator indented"></div>
+          <div class="nutrition-row sub">
+            <span class="label">Added sugar</span>
+            <span class="value">0 g</span>
+          </div>
+          <div class="nutrition-separator"></div>
+          <div class="nutrition-row">
+            <span class="label">Weight</span>
+            <span class="value">97 g</span>
+          </div>
+        </div>
+
+        <!-- Track button: blue, full-width per Figma -->
+        <button class="track-btn">Track</button>
+      </div>
+      <div class="home-indicator home-indicator-dark"></div>
+    </div>
+
+  </div><!-- /phone-frame -->
+</div><!-- /proto-barcode -->
+
+
+<!-- ═══════════════════════════════════════════════════
+     PROTOTYPE 2: SCAN A FOOD
+     ═══════════════════════════════════════════════════ -->
+<div class="proto-wrapper" id="proto-food">
+
+  <div class="proto-section">
+    <h2>Scan a food</h2>
+    <div class="tap-hint">Tap to advance</div>
+    <div class="step-counter">Step 1 of 4</div>
+  </div>
+
+  <div class="progress-dots">
+    <div class="dot active"></div>
+    <div class="dot"></div>
+    <div class="dot"></div>
+    <div class="dot"></div>
+  </div>
+
+  <div class="phone-frame">
+
+    <!-- SCREEN 1: Empty Scanner -->
+    <div class="screen active">
+      <div class="scanner-top">
+        <div class="status-bar">
+          <span class="time">9:41</span>
+          <div class="icons">
+            <div class="signal-bars"><span></span><span></span><span></span><span></span></div>
+            <div class="wifi-icon"><div class="wifi-dot"></div></div>
+            <div class="battery"><div class="battery-fill"></div></div>
+          </div>
+        </div>
+        <div class="scanner-header">
+          <span class="back-arrow">&larr;</span>
+          <span class="title">Scan</span>
+          <span class="flash-icon">
+            <img src="assets/flash-off.svg" alt="Flash off" style="width: 20px; height: 22px; display: block;">
+          </span>
+        </div>
+        <div class="instruction">Scan a menu, food, recipe, or barcode to get started.</div>
+      </div>
+      <div class="camera-area">
+        <div class="corner-brackets">
+          <div class="bracket bracket-tl"></div>
+          <div class="bracket bracket-tr"></div>
+          <div class="bracket bracket-bl"></div>
+          <div class="bracket bracket-br"></div>
+        </div>
+      </div>
+      <div class="mode-tabs">
+        <span>Barcode</span>
+        <span>Food</span>
+        <span class="active-tab">Auto</span>
+        <span>Recipe</span>
+        <span>Menu</span>
+      </div>
+      <div class="bottom-controls">
+        <div class="gallery-icon"><img src="assets/Camera.png" alt="Gallery" style="width: 30px; height: 30px; border-radius: 6px; object-fit: cover;"></div>
+        <div class="shutter-btn"></div>
+      </div>
+      <div class="home-indicator"></div>
+    </div>
+
+    <!-- SCREEN 2: Food Photo Detected -->
+    <div class="screen">
+      <div class="scanner-top">
+        <div class="status-bar">
+          <span class="time">9:41</span>
+          <div class="icons">
+            <div class="signal-bars"><span></span><span></span><span></span><span></span></div>
+            <div class="wifi-icon"><div class="wifi-dot"></div></div>
+            <div class="battery"><div class="battery-fill"></div></div>
+          </div>
+        </div>
+        <div class="scanner-header">
+          <span class="back-arrow">&larr;</span>
+          <span class="title">Scan</span>
+          <span class="flash-icon">
+            <img src="assets/flash-off.svg" alt="Flash off" style="width: 20px; height: 22px; display: block;">
+          </span>
+        </div>
+        <div class="instruction">Scan a menu, food, recipe, or barcode to get started.</div>
+      </div>
+      <div class="camera-area">
+        <div class="food-photo-container">
+          <img src="assets/food-photo.jpg" alt="Food" style="width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0;">
+        </div>
+        <div class="corner-brackets">
+          <div class="bracket bracket-tl"></div>
+          <div class="bracket bracket-tr"></div>
+          <div class="bracket bracket-bl"></div>
+          <div class="bracket bracket-br"></div>
+        </div>
+        <div class="tooltip tooltip-detect">Point at anything &mdash; I'll figure it out</div>
+      </div>
+      <div class="mode-tabs">
+        <span>Barcode</span>
+        <span>Food</span>
+        <span class="active-tab">Auto</span>
+        <span>Recipe</span>
+        <span>Menu</span>
+      </div>
+      <div class="bottom-controls">
+        <div class="gallery-icon"><img src="assets/Camera.png" alt="Gallery" style="width: 30px; height: 30px; border-radius: 6px; object-fit: cover;"></div>
+        <div class="shutter-btn"></div>
+      </div>
+      <div class="home-indicator"></div>
+    </div>
+
+    <!-- SCREEN 3: Food Photo Recognized -->
+    <div class="screen">
+      <div class="scanner-top">
+        <div class="status-bar">
+          <span class="time">9:41</span>
+          <div class="icons">
+            <div class="signal-bars"><span></span><span></span><span></span><span></span></div>
+            <div class="wifi-icon"><div class="wifi-dot"></div></div>
+            <div class="battery"><div class="battery-fill"></div></div>
+          </div>
+        </div>
+        <div class="scanner-header">
+          <span class="back-arrow">&larr;</span>
+          <span class="title">Scan</span>
+          <span class="flash-icon">
+            <img src="assets/flash-off.svg" alt="Flash off" style="width: 20px; height: 22px; display: block;">
+          </span>
+        </div>
+        <div class="instruction">Scan a menu, food, recipe, or barcode to get started.</div>
+      </div>
+      <div class="camera-area">
+        <div class="food-photo-container">
+          <img src="assets/food-photo.jpg" alt="Food" style="width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0;">
+        </div>
+        <div class="corner-brackets">
+          <div class="bracket bracket-tl"></div>
+          <div class="bracket bracket-tr"></div>
+          <div class="bracket bracket-bl"></div>
+          <div class="bracket bracket-br"></div>
+        </div>
+        <div class="tooltip tooltip-recognized">
+          <span class="green-dot"></span>
+          Food Photo
+        </div>
+        <!-- Loading overlay (hidden by default, shown after shutter flash) -->
+        <div class="loading-overlay">
+          <div class="loading-spinner"></div>
+          <div class="loading-label">Analyzing food…</div>
+        </div>
+      </div>
+      <div class="mode-tabs">
+        <span>Barcode</span>
+        <span>Food</span>
+        <span class="active-tab">Auto</span>
+        <span>Recipe</span>
+        <span>Menu</span>
+      </div>
+      <div class="bottom-controls">
+        <div class="gallery-icon"><img src="assets/Camera.png" alt="Gallery" style="width: 30px; height: 30px; border-radius: 6px; object-fit: cover;"></div>
+        <div class="shutter-btn"></div>
+      </div>
+      <div class="home-indicator"></div>
+    </div>
+
+    <!-- SCREEN 4: Food Result (per Figma) -->
+    <div class="screen screen-result">
+      <div class="status-bar status-bar-dark">
+        <span class="time">9:41</span>
+        <div class="icons">
+          <div class="signal-bars"><span></span><span></span><span></span><span></span></div>
+          <div class="wifi-icon"><div class="wifi-dot"></div></div>
+          <div class="battery"><div class="battery-fill"></div></div>
+        </div>
+      </div>
+      <!-- Header: ✕ | Lunch | Track -->
+      <div class="result-header">
+        <div class="close-btn">&#x2715;</div>
+        <span class="result-title">Lunch</span>
+        <span class="action-btn">Track</span>
+      </div>
+      <!-- Scrollable result body -->
+      <div class="food-result-body">
+        <!-- Instruction paragraph -->
+        <p class="food-instruction">Check your ingredients and serving sizes to make sure everything&rsquo;s correct. Tap a food item to make changes, or tap the checkmark to remove an item.</p>
+
+        <!-- Section label -->
+        <div class="food-section-label">Food photo</div>
+
+        <!-- Food item cards -->
+        <div class="food-item-card">
+          <div class="pts-circle"><span>2</span></div>
+          <div class="item-info">
+            <div class="item-name">Wegmans Travels of India Chicken Curry</div>
+            <div class="item-amount">1 package(s)</div>
+          </div>
+        </div>
+        <div class="food-item-card">
+          <div class="pts-circle"><span>2</span></div>
+          <div class="item-info">
+            <div class="item-name">Cooked white rice</div>
+            <div class="item-amount">1 cup(s)</div>
+          </div>
+        </div>
+        <div class="food-item-card">
+          <div class="pts-circle"><span>2</span></div>
+          <div class="item-info">
+            <div class="item-name">Sugar snap peas</div>
+            <div class="item-amount">&frac34; cup(s)</div>
+          </div>
+        </div>
+        <div class="food-item-card">
+          <div class="pts-circle"><span>2</span></div>
+          <div class="item-info">
+            <div class="item-name">Sauteed vegetables</div>
+            <div class="item-amount">1&frac18; cup(s)</div>
+          </div>
+        </div>
+
+        <!-- Missing item prompt + Add new food button -->
+        <p class="missing-prompt">Missing an item from your plate?</p>
+        <button class="add-food-btn">Add new food</button>
+
+        <!-- Track Recipe button -->
+        <button class="track-recipe-btn">Track Recipe</button>
+      </div>
+      <div class="home-indicator home-indicator-dark"></div>
+    </div>
+
+  </div><!-- /phone-frame -->
+</div><!-- /proto-food -->
+
+
+<!-- ═══════════════════════════════════════════════════
+     PROTOTYPE 3: SCAN A RESTAURANT MENU
+     ═══════════════════════════════════════════════════ -->
+<div class="proto-wrapper" id="proto-menu">
+
+  <div class="proto-section">
+    <h2>Scan a restaurant menu</h2>
+    <div class="tap-hint">Tap to advance</div>
+    <div class="step-counter">Step 1 of 4</div>
+  </div>
+
+  <div class="progress-dots">
+    <div class="dot active"></div>
+    <div class="dot"></div>
+    <div class="dot"></div>
+    <div class="dot"></div>
+  </div>
+
+  <div class="phone-frame">
+
+    <!-- SCREEN 1: Empty Scanner -->
+    <div class="screen active">
+      <div class="scanner-top">
+        <div class="status-bar">
+          <span class="time">9:41</span>
+          <div class="icons">
+            <div class="signal-bars"><span></span><span></span><span></span><span></span></div>
+            <div class="wifi-icon"><div class="wifi-dot"></div></div>
+            <div class="battery"><div class="battery-fill"></div></div>
+          </div>
+        </div>
+        <div class="scanner-header">
+          <span class="back-arrow">&larr;</span>
+          <span class="title">Scan</span>
+          <span class="flash-icon">
+            <img src="assets/flash-off.svg" alt="Flash off" style="width: 20px; height: 22px; display: block;">
+          </span>
+        </div>
+        <div class="instruction">Scan a menu, food, recipe, or barcode to get started.</div>
+      </div>
+      <div class="camera-area">
+        <div class="corner-brackets">
+          <div class="bracket bracket-tl"></div>
+          <div class="bracket bracket-tr"></div>
+          <div class="bracket bracket-bl"></div>
+          <div class="bracket bracket-br"></div>
+        </div>
+      </div>
+      <div class="mode-tabs">
+        <span>Barcode</span>
+        <span>Food</span>
+        <span class="active-tab">Auto</span>
+        <span>Recipe</span>
+        <span>Menu</span>
+      </div>
+      <div class="bottom-controls">
+        <div class="gallery-icon"><img src="assets/Camera.png" alt="Gallery" style="width: 30px; height: 30px; border-radius: 6px; object-fit: cover;"></div>
+        <div class="shutter-btn"></div>
+      </div>
+      <div class="home-indicator"></div>
+    </div>
+
+    <!-- SCREEN 2: Menu Detected -->
+    <div class="screen">
+      <div class="scanner-top">
+        <div class="status-bar">
+          <span class="time">9:41</span>
+          <div class="icons">
+            <div class="signal-bars"><span></span><span></span><span></span><span></span></div>
+            <div class="wifi-icon"><div class="wifi-dot"></div></div>
+            <div class="battery"><div class="battery-fill"></div></div>
+          </div>
+        </div>
+        <div class="scanner-header">
+          <span class="back-arrow">&larr;</span>
+          <span class="title">Scan</span>
+          <span class="flash-icon">
+            <img src="assets/flash-off.svg" alt="Flash off" style="width: 20px; height: 22px; display: block;">
+          </span>
+        </div>
+        <div class="instruction">Scan a menu, food, recipe, or barcode to get started.</div>
+      </div>
+      <div class="camera-area">
+        <div class="menu-photo-container">
+          <img src="assets/menu-photo.jpg" alt="Menu" style="width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0;">
+        </div>
+        <div class="corner-brackets">
+          <div class="bracket bracket-tl"></div>
+          <div class="bracket bracket-tr"></div>
+          <div class="bracket bracket-bl"></div>
+          <div class="bracket bracket-br"></div>
+        </div>
+        <div class="tooltip tooltip-detect">Point at anything &mdash; I'll figure it out</div>
+      </div>
+      <div class="mode-tabs">
+        <span>Barcode</span>
+        <span>Food</span>
+        <span class="active-tab">Auto</span>
+        <span>Recipe</span>
+        <span>Menu</span>
+      </div>
+      <div class="bottom-controls">
+        <div class="gallery-icon"><img src="assets/Camera.png" alt="Gallery" style="width: 30px; height: 30px; border-radius: 6px; object-fit: cover;"></div>
+        <div class="shutter-btn"></div>
+      </div>
+      <div class="home-indicator"></div>
+    </div>
+
+    <!-- SCREEN 3: Menu Recognized -->
+    <div class="screen">
+      <div class="scanner-top">
+        <div class="status-bar">
+          <span class="time">9:41</span>
+          <div class="icons">
+            <div class="signal-bars"><span></span><span></span><span></span><span></span></div>
+            <div class="wifi-icon"><div class="wifi-dot"></div></div>
+            <div class="battery"><div class="battery-fill"></div></div>
+          </div>
+        </div>
+        <div class="scanner-header">
+          <span class="back-arrow">&larr;</span>
+          <span class="title">Scan</span>
+          <span class="flash-icon">
+            <img src="assets/flash-off.svg" alt="Flash off" style="width: 20px; height: 22px; display: block;">
+          </span>
+        </div>
+        <div class="instruction">Scan a menu, food, recipe, or barcode to get started.</div>
+      </div>
+      <div class="camera-area">
+        <div class="menu-photo-container">
+          <img src="assets/menu-focus.jpg" alt="Menu" style="width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0;">
+        </div>
+        <div class="tooltip tooltip-recognized">
+          <span class="green-dot"></span>
+          Menu
+        </div>
+        <!-- Loading overlay (hidden by default, shown after shutter flash) -->
+        <div class="loading-overlay">
+          <div class="loading-spinner"></div>
+          <div class="loading-label">Analyzing menu…</div>
+        </div>
+      </div>
+      <div class="mode-tabs">
+        <span>Barcode</span>
+        <span>Food</span>
+        <span class="active-tab">Auto</span>
+        <span>Recipe</span>
+        <span>Menu</span>
+      </div>
+      <div class="bottom-controls">
+        <div class="gallery-icon"><img src="assets/Camera.png" alt="Gallery" style="width: 30px; height: 30px; border-radius: 6px; object-fit: cover;"></div>
+        <div class="shutter-btn"></div>
+      </div>
+      <div class="home-indicator"></div>
+    </div>
+
+    <!-- SCREEN 4: Menu Result -->
+    <div class="screen screen-result">
+      <div class="status-bar status-bar-dark">
+        <span class="time">9:41</span>
+        <div class="icons">
+          <div class="signal-bars"><span></span><span></span><span></span><span></span></div>
+          <div class="wifi-icon"><div class="wifi-dot"></div></div>
+          <div class="battery"><div class="battery-fill"></div></div>
+        </div>
+      </div>
+      <div class="result-header">
+        <div class="close-btn">&times;</div>
+        <span class="result-title">Menu Result</span>
+        <div class="action-placeholder"></div>
+      </div>
+      <div class="restaurant-info">
+        <div class="restaurant-name">Tony's Italian Kitchen</div>
+        <div class="restaurant-meta">&#127829; Scanned menu</div>
+      </div>
+      <div class="items-header">
+        <span class="items-count">12 items found</span>
+        <span class="sort-btn">&updownarrow; Sort by points</span>
+      </div>
+      <div class="menu-list">
+        <div class="menu-card">
+          <div class="number-circle">2</div>
+          <div class="card-content">
+            <div class="card-name">Garden Salad</div>
+            <div class="card-desc">Mixed greens, tomatoes, vinaigrette</div>
+          </div>
+          <span class="chevron">&rsaquo;</span>
+        </div>
+        <div class="menu-card">
+          <div class="number-circle">3</div>
+          <div class="card-content">
+            <div class="card-name">Grilled Chicken Salad</div>
+            <div class="card-desc">Chicken breast, romaine, light dressing</div>
+          </div>
+          <span class="chevron">&rsaquo;</span>
+        </div>
+        <div class="menu-card">
+          <div class="number-circle">4</div>
+          <div class="card-content">
+            <div class="card-name">Minestrone Soup</div>
+            <div class="card-desc">Vegetables, beans, pasta in broth</div>
+          </div>
+          <span class="chevron">&rsaquo;</span>
+        </div>
+        <div class="menu-card">
+          <div class="number-circle">7</div>
+          <div class="card-content">
+            <div class="card-name">Margherita Pizza</div>
+            <div class="card-desc">Tomato sauce, mozzarella, basil</div>
+          </div>
+          <span class="chevron">&rsaquo;</span>
+        </div>
+        <div class="menu-card">
+          <div class="number-circle">9</div>
+          <div class="card-content">
+            <div class="card-name">Chicken Parmesan</div>
+            <div class="card-desc">Breaded chicken, marinara, mozzarella</div>
+          </div>
+          <span class="chevron">&rsaquo;</span>
+        </div>
+        <div class="menu-card">
+          <div class="number-circle">11</div>
+          <div class="card-content">
+            <div class="card-name">Spaghetti Bolognese</div>
+            <div class="card-desc">Beef ragu, spaghetti, parmesan</div>
+          </div>
+          <span class="chevron">&rsaquo;</span>
+        </div>
+        <div class="menu-card">
+          <div class="number-circle">14</div>
+          <div class="card-content">
+            <div class="card-name">Fettuccine Alfredo</div>
+            <div class="card-desc">Cream sauce, parmesan, fettuccine</div>
+          </div>
+          <span class="chevron">&rsaquo;</span>
+        </div>
+      </div>
+      <div class="home-indicator home-indicator-dark"></div>
+    </div>
+
+  </div><!-- /phone-frame -->
+</div><!-- /proto-menu -->
+
+
+<!-- ═══════════════════════════════════════════════════
+     PROTOTYPE 4: SCAN A RECIPE
+     ═══════════════════════════════════════════════════ -->
+<div class="proto-wrapper" id="proto-recipe">
+
+  <div class="proto-section">
+    <h2>Scan a recipe</h2>
+    <div class="tap-hint">Tap to advance</div>
+    <div class="step-counter">Step 1 of 4</div>
+  </div>
+
+  <div class="progress-dots">
+    <div class="dot active"></div>
+    <div class="dot"></div>
+    <div class="dot"></div>
+    <div class="dot"></div>
+  </div>
+
+  <div class="phone-frame">
+
+    <!-- SCREEN 1: Empty Scanner -->
+    <div class="screen active">
+      <div class="scanner-top">
+        <div class="status-bar">
+          <span class="time">9:41</span>
+          <div class="icons">
+            <div class="signal-bars"><span></span><span></span><span></span><span></span></div>
+            <div class="wifi-icon"><div class="wifi-dot"></div></div>
+            <div class="battery"><div class="battery-fill"></div></div>
+          </div>
+        </div>
+        <div class="scanner-header">
+          <span class="back-arrow">&larr;</span>
+          <span class="title">Scan</span>
+          <span class="flash-icon">
+            <img src="assets/flash-off.svg" alt="Flash off" style="width: 20px; height: 22px; display: block;">
+          </span>
+        </div>
+        <div class="instruction">Scan a menu, food, recipe, or barcode to get started.</div>
+      </div>
+      <div class="camera-area">
+        <div class="corner-brackets">
+          <div class="bracket bracket-tl"></div>
+          <div class="bracket bracket-tr"></div>
+          <div class="bracket bracket-bl"></div>
+          <div class="bracket bracket-br"></div>
+        </div>
+      </div>
+      <div class="mode-tabs">
+        <span>Barcode</span>
+        <span>Food</span>
+        <span class="active-tab">Auto</span>
+        <span>Recipe</span>
+        <span>Menu</span>
+      </div>
+      <div class="bottom-controls">
+        <div class="gallery-icon"><img src="assets/Camera.png" alt="Gallery" style="width: 30px; height: 30px; border-radius: 6px; object-fit: cover;"></div>
+        <div class="shutter-btn"></div>
+      </div>
+      <div class="home-indicator"></div>
+    </div>
+
+    <!-- SCREEN 2: Recipe Detected -->
+    <div class="screen">
+      <div class="scanner-top">
+        <div class="status-bar">
+          <span class="time">9:41</span>
+          <div class="icons">
+            <div class="signal-bars"><span></span><span></span><span></span><span></span></div>
+            <div class="wifi-icon"><div class="wifi-dot"></div></div>
+            <div class="battery"><div class="battery-fill"></div></div>
+          </div>
+        </div>
+        <div class="scanner-header">
+          <span class="back-arrow">&larr;</span>
+          <span class="title">Scan</span>
+          <span class="flash-icon">
+            <img src="assets/flash-off.svg" alt="Flash off" style="width: 20px; height: 22px; display: block;">
+          </span>
+        </div>
+        <div class="instruction">Scan a menu, food, recipe, or barcode to get started.</div>
+      </div>
+      <div class="camera-area">
+        <div class="recipe-photo-container">
+          <img src="assets/recipe-photo.jpg" alt="Recipe" style="width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0;">
+        </div>
+        <div class="corner-brackets">
+          <div class="bracket bracket-tl"></div>
+          <div class="bracket bracket-tr"></div>
+          <div class="bracket bracket-bl"></div>
+          <div class="bracket bracket-br"></div>
+        </div>
+        <div class="tooltip tooltip-detect">Point at anything &mdash; I'll figure it out</div>
+      </div>
+      <div class="mode-tabs">
+        <span>Barcode</span>
+        <span>Food</span>
+        <span class="active-tab">Auto</span>
+        <span>Recipe</span>
+        <span>Menu</span>
+      </div>
+      <div class="bottom-controls">
+        <div class="gallery-icon"><img src="assets/Camera.png" alt="Gallery" style="width: 30px; height: 30px; border-radius: 6px; object-fit: cover;"></div>
+        <div class="shutter-btn"></div>
+      </div>
+      <div class="home-indicator"></div>
+    </div>
+
+    <!-- SCREEN 3: Recipe Recognized -->
+    <div class="screen">
+      <div class="scanner-top">
+        <div class="status-bar">
+          <span class="time">9:41</span>
+          <div class="icons">
+            <div class="signal-bars"><span></span><span></span><span></span><span></span></div>
+            <div class="wifi-icon"><div class="wifi-dot"></div></div>
+            <div class="battery"><div class="battery-fill"></div></div>
+          </div>
+        </div>
+        <div class="scanner-header">
+          <span class="back-arrow">&larr;</span>
+          <span class="title">Scan</span>
+          <span class="flash-icon">
+            <img src="assets/flash-off.svg" alt="Flash off" style="width: 20px; height: 22px; display: block;">
+          </span>
+        </div>
+        <div class="instruction">Scan a menu, food, recipe, or barcode to get started.</div>
+      </div>
+      <div class="camera-area">
+        <div class="recipe-photo-container">
+          <img src="assets/recipe-focus.jpg" alt="Recipe" style="width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0;">
+        </div>
+        <div class="tooltip tooltip-recognized">
+          <span class="green-dot"></span>
+          Recipe
+        </div>
+        <!-- Loading overlay (hidden by default, shown after shutter flash) -->
+        <div class="loading-overlay">
+          <div class="loading-spinner"></div>
+          <div class="loading-label">Analyzing recipe…</div>
+        </div>
+      </div>
+      <div class="mode-tabs">
+        <span>Barcode</span>
+        <span>Food</span>
+        <span class="active-tab">Auto</span>
+        <span>Recipe</span>
+        <span>Menu</span>
+      </div>
+      <div class="bottom-controls">
+        <div class="gallery-icon"><img src="assets/Camera.png" alt="Gallery" style="width: 30px; height: 30px; border-radius: 6px; object-fit: cover;"></div>
+        <div class="shutter-btn"></div>
+      </div>
+      <div class="home-indicator"></div>
+    </div>
+
+    <!-- SCREEN 4: Recipe Result -->
+    <div class="screen screen-result">
+      <div class="status-bar status-bar-dark">
+        <span class="time">9:41</span>
+        <div class="icons">
+          <div class="signal-bars"><span></span><span></span><span></span><span></span></div>
+          <div class="wifi-icon"><div class="wifi-dot"></div></div>
+          <div class="battery"><div class="battery-fill"></div></div>
+        </div>
+      </div>
+      <div class="result-header">
+        <div class="close-btn">&times;</div>
+        <span class="result-title">Recipe Result</span>
+        <span class="action-btn">Save</span>
+      </div>
+      <div class="result-body">
+        <div class="info-banner">
+          <p>&#x1F4F7; Scanned from photo &mdash; check ingredients to make sure everything looks right.</p>
+        </div>
+        <div class="recipe-title-area">
+          <div class="left">
+            <h2>Zucchini Pizza</h2>
+            <span class="meta">&#x1F4D6; Scanned recipe &bull; 6 servings</span>
+          </div>
+          <div class="score-circle"><span>4</span></div>
+        </div>
+
+        <div class="section-heading">
+          <h3>Recipe details</h3>
+        </div>
+        <div class="detail-card">
+          <span class="label">Prep time</span>
+          <span class="value">45 min</span>
+        </div>
+        <div class="detail-card">
+          <span class="label">Cook time</span>
+          <span class="value">45 min</span>
+        </div>
+        <div class="detail-card" style="margin-bottom:24px;">
+          <span class="label">Serves</span>
+          <span class="value">6</span>
+        </div>
+
+        <div class="section-heading">
+          <h3>Ingredients</h3>
+          <span class="add-link">Add</span>
+        </div>
+
+        <div class="ingredient-card">
+          <div class="pts"><span>2</span></div>
+          <div class="info">
+            <div class="name">Chicken breast</div>
+            <div class="amount">2 cups, diced</div>
+          </div>
+          <span class="chevron">&rsaquo;</span>
+        </div>
+        <div class="ingredient-card">
+          <div class="pts"><span>0</span></div>
+          <div class="info">
+            <div class="name">Carrots</div>
+            <div class="amount">3 medium, sliced</div>
+          </div>
+          <span class="chevron">&rsaquo;</span>
+        </div>
+        <div class="ingredient-card">
+          <div class="pts"><span>3</span></div>
+          <div class="info">
+            <div class="name">Egg noodles</div>
+            <div class="amount">200g</div>
+          </div>
+          <span class="chevron">&rsaquo;</span>
+        </div>
+        <div class="ingredient-card">
+          <div class="pts"><span>0</span></div>
+          <div class="info">
+            <div class="name">Celery</div>
+            <div class="amount">2 stalks, chopped</div>
+          </div>
+          <span class="chevron">&rsaquo;</span>
+        </div>
+        <div class="ingredient-card">
+          <div class="pts"><span>2</span></div>
+          <div class="info">
+            <div class="name">Butter</div>
+            <div class="amount">1 tbsp</div>
+          </div>
+          <span class="chevron">&rsaquo;</span>
+        </div>
+        <div class="ingredient-card">
+          <div class="pts"><span>0</span></div>
+          <div class="info">
+            <div class="name">Onion</div>
+            <div class="amount">1 medium, diced</div>
+          </div>
+          <span class="chevron">&rsaquo;</span>
+        </div>
+
+        <div class="bottom-buttons">
+          <button class="btn-track">Track Recipe</button>
+          <button class="btn-save-recipe">Save to My Recipes</button>
+        </div>
+      </div>
+      <div class="home-indicator home-indicator-dark"></div>
+    </div>
+
+  </div><!-- /phone-frame -->
+</div><!-- /proto-recipe -->
+
+
+<!-- ═══════════════════════════════════════════════════
+     JAVASCRIPT
+     ═══════════════════════════════════════════════════ -->
+<script>
+(function() {
+
+  /* ─── Reusable prototype initializer ─── */
+  function initPrototype(containerId) {
+    var container = document.getElementById(containerId);
+    var screens = container.querySelectorAll('.screen');
+    var phone = container.querySelector('.phone-frame');
+    var dots = container.querySelectorAll('.progress-dots .dot');
+    var counter = container.querySelector('.step-counter');
+    var current = 0;
+    var total = screens.length;
+
+    function show(idx) {
+      if (idx < 0) idx = 0;
+      if (idx >= total) idx = 0; // loop back to start
+      current = idx;
+      // Toggle screens
+      for (var i = 0; i < screens.length; i++) {
+        if (i === current) {
+          screens[i].classList.add('active');
+        } else {
+          screens[i].classList.remove('active');
+        }
+      }
+      // Toggle dots
+      for (var j = 0; j < dots.length; j++) {
+        if (j === current) {
+          dots[j].classList.add('active');
+        } else {
+          dots[j].classList.remove('active');
+        }
+      }
+      // Update step counter
+      if (counter) {
+        counter.textContent = 'Step ' + (current + 1) + ' of ' + total;
+      }
+    }
+
+    // Click on phone frame to advance
+    phone.addEventListener('click', function(e) {
+      // Don't advance when scrolling result lists or clicking buttons
+      if (e.target.closest('.menu-list') || e.target.closest('.result-body') || e.target.closest('.result-content') || e.target.closest('.food-result-body') || e.target.closest('.scan-drawer') || e.target.closest('button')) return;
+      show(current + 1);
+    });
+
+    show(0);
+
+    // Return an object so keyboard nav can call show()
+    return {
+      show: show,
+      getCurrent: function() { return current; },
+      getTotal: function() { return total; },
+      getContainer: function() { return container; }
+    };
+  }
+
+  /* ─── Initialize all 4 prototypes ─── */
+  var protos = [
+    initPrototype('proto-barcode'),
+    initPrototype('proto-food'),
+    initPrototype('proto-menu'),
+    initPrototype('proto-recipe')
+  ];
+
+  /* ─── Shutter flash + loading: food prototype screen 3 ─── */
+  // When the shutter button is clicked on food screen 3:
+  // 1. Play white flash on camera area
+  // 2. Show loading overlay with spinner for ~2.5s
+  // 3. Then advance to result screen (screen 4)
+  (function() {
+    var foodProto = document.getElementById('proto-food');
+    var foodScreens = foodProto.querySelectorAll('.screen');
+    var screen3 = foodScreens[2]; // Screen 3 (index 2)
+    var shutterBtn = screen3.querySelector('.shutter-btn');
+    var cameraArea = screen3.querySelector('.camera-area');
+    var loadingOverlay = screen3.querySelector('.loading-overlay');
+
+    shutterBtn.addEventListener('click', function(e) {
+      if (!screen3.classList.contains('active')) return;
+      e.stopPropagation();
+
+      // Step 1: Trigger shutter flash
+      cameraArea.classList.add('shutter-flash');
+
+      // Step 2: After flash ends (350ms), show loading overlay
+      setTimeout(function() {
+        cameraArea.classList.remove('shutter-flash');
+        loadingOverlay.classList.add('visible');
+      }, 350);
+
+      // Step 3: After loading (2.5s from flash end), advance to screen 4
+      setTimeout(function() {
+        loadingOverlay.classList.remove('visible');
+        protos[1].show(3); // protos[1] = food, index 3 = screen 4
+      }, 2850); // 350ms flash + 2500ms loading
+    });
+  })();
+
+  /* ─── Shutter flash + loading: menu prototype screen 3 ─── */
+  (function() {
+    var menuProto = document.getElementById('proto-menu');
+    var menuScreens = menuProto.querySelectorAll('.screen');
+    var screen3 = menuScreens[2]; // Screen 3 (index 2)
+    var shutterBtn = screen3.querySelector('.shutter-btn');
+    var cameraArea = screen3.querySelector('.camera-area');
+    var loadingOverlay = screen3.querySelector('.loading-overlay');
+
+    shutterBtn.addEventListener('click', function(e) {
+      if (!screen3.classList.contains('active')) return;
+      e.stopPropagation();
+
+      // Step 1: Trigger shutter flash
+      cameraArea.classList.add('shutter-flash');
+
+      // Step 2: After flash ends (350ms), show loading overlay
+      setTimeout(function() {
+        cameraArea.classList.remove('shutter-flash');
+        loadingOverlay.classList.add('visible');
+      }, 350);
+
+      // Step 3: After loading (2.5s from flash end), advance to screen 4
+      setTimeout(function() {
+        loadingOverlay.classList.remove('visible');
+        protos[2].show(3); // protos[2] = menu, index 3 = screen 4
+      }, 2850); // 350ms flash + 2500ms loading
+    });
+  })();
+
+  /* ─── Shutter flash + loading: recipe prototype screen 3 ─── */
+  // When the shutter button is clicked on recipe screen 3:
+  // 1. Play white flash on camera area
+  // 2. Show loading overlay with spinner for ~2.5s
+  // 3. Then advance to result screen (screen 4)
+  (function() {
+    var recipeProto = document.getElementById('proto-recipe');
+    var recipeScreens = recipeProto.querySelectorAll('.screen');
+    var screen3 = recipeScreens[2]; // Screen 3 (index 2)
+    var shutterBtn = screen3.querySelector('.shutter-btn');
+    var cameraArea = screen3.querySelector('.camera-area');
+    var loadingOverlay = screen3.querySelector('.loading-overlay');
+
+    shutterBtn.addEventListener('click', function(e) {
+      // Only act when screen 3 is active
+      if (!screen3.classList.contains('active')) return;
+
+      // Stop the click from bubbling to the phone-frame advance handler
+      e.stopPropagation();
+
+      // Step 1: Trigger shutter flash
+      cameraArea.classList.add('shutter-flash');
+
+      // Step 2: After flash ends (350ms), show loading overlay
+      setTimeout(function() {
+        cameraArea.classList.remove('shutter-flash');
+        loadingOverlay.classList.add('visible');
+      }, 350);
+
+      // Step 3: After loading (2.5s total from flash end), advance to screen 4
+      setTimeout(function() {
+        loadingOverlay.classList.remove('visible');
+        protos[3].show(3); // protos[3] = recipe, index 3 = screen 4
+      }, 2850); // 350ms flash + 2500ms loading
+    });
+  })();
+
+  /* ─── Keyboard support: Left/Right arrows cycle the most visible prototype ─── */
+  function getMostVisibleProto() {
+    var bestIndex = 0;
+    var bestVisibility = -Infinity;
+
+    for (var i = 0; i < protos.length; i++) {
+      var container = protos[i].getContainer();
+      var rect = container.getBoundingClientRect();
+      var viewportHeight = window.innerHeight;
+
+      // Calculate how much of the section is visible
+      var top = Math.max(0, rect.top);
+      var bottom = Math.min(viewportHeight, rect.bottom);
+      var visible = bottom - top;
+
+      // Also factor in how centered it is
+      var center = (rect.top + rect.bottom) / 2;
+      var viewportCenter = viewportHeight / 2;
+      var centerOffset = Math.abs(center - viewportCenter);
+
+      // Score: more visible area = better, closer to center = better
+      var score = visible - centerOffset * 0.5;
+
+      if (score > bestVisibility) {
+        bestVisibility = score;
+        bestIndex = i;
+      }
+    }
+
+    return bestIndex;
+  }
+
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'ArrowRight') {
+      e.preventDefault();
+      var idx = getMostVisibleProto();
+      var p = protos[idx];
+      p.show(p.getCurrent() + 1);
+    } else if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      var idx2 = getMostVisibleProto();
+      var p2 = protos[idx2];
+      var prev = p2.getCurrent() - 1;
+      if (prev < 0) prev = p2.getTotal() - 1;
+      p2.show(prev);
+    }
+  });
+
+})();
+</script>
+
+</body>
+</html>
