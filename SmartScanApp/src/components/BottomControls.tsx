@@ -6,9 +6,10 @@ import { View, TouchableOpacity, Image, StyleSheet } from 'react-native';
 
 type Props = {
   visible: boolean;
+  onShutter?: () => void; // called when shutter button is tapped
 };
 
-export default function BottomControls({ visible }: Props) {
+export default function BottomControls({ visible, onShutter }: Props) {
   return (
     <View style={[styles.container, !visible && styles.hidden]}>
       {/* Gallery icon (Camera.png thumbnail) */}
@@ -18,7 +19,7 @@ export default function BottomControls({ visible }: Props) {
       />
 
       {/* Shutter button — white circle with a ring */}
-      <TouchableOpacity style={styles.shutterOuter}>
+      <TouchableOpacity style={styles.shutterOuter} onPress={onShutter}>
         <View style={styles.shutterInner} />
       </TouchableOpacity>
 

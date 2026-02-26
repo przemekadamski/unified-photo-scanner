@@ -1,19 +1,21 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Animated } from 'react-native';
+import { View, Text, StyleSheet, Animated, TouchableOpacity } from 'react-native';
 import { Svg, Path } from 'react-native-svg';
-import HomeIndicator from './HomeIndicator';
 
-// Bottom drawer/sheet that slides up/down when entering/leaving Barcode mode
+// Bottom drawer/sheet that slides up/down when entering/leaving Barcode mode.
+// When `scanned` is true, replaces search content with the scanned product card.
 // Matches smart-scan.html: sheet-slide-up 0.4s cubic-bezier(0.32, 0.72, 0, 1)
 
 type Props = {
   visible: boolean;
+  scanned?: boolean; // true = show product result instead of search
+  onProductTap?: () => void; // called when the scanned product card is tapped
 };
 
-// Sheet height (content + home indicator)
-const SHEET_HEIGHT = 200;
+// Sheet height (content only, HomeIndicator is global now)
+const SHEET_HEIGHT = 155;
 
-export default function SearchSheet({ visible }: Props) {
+export default function SearchSheet({ visible, scanned = false, onProductTap }: Props) {
   // Animated value: 0 = hidden (off-screen below), 1 = fully visible
   const slideAnim = useRef(new Animated.Value(0)).current;
 
@@ -42,33 +44,57 @@ export default function SearchSheet({ visible }: Props) {
       {/* Small drag handle at the top */}
       <View style={styles.handle} />
 
-      {/* Prompt text with "Search manually" link */}
-      <Text style={styles.prompt}>
-        Can't find the item?{' '}
-        <Text style={styles.promptLink}>Search manually</Text>
-      </Text>
+      {scanned ? (
+        <>
+          {/* Results label */}
+          <Text style={styles.resultsLabel}>RESULT(S)</Text>
 
-      {/* Search input bar */}
-      <View style={styles.searchBar}>
-        {/* Search icon (magnifying glass) */}
-        <View style={styles.searchIcon}>
-          <Svg width={18} height={18} viewBox="0 0 17.5068 17.5068" fill="none">
-            <Path
-              d="M7.81152 0C12.1258 0 15.6238 3.4973 15.624 7.81152C15.624 9.69866 14.9539 11.4289 13.8398 12.7793L17.2871 16.2256C17.58 16.5185 17.58 16.9942 17.2871 17.2871C16.9942 17.58 16.5185 17.58 16.2256 17.2871L12.7793 13.8398C11.4289 14.9539 9.69866 15.624 7.81152 15.624C3.4973 15.6238 0 12.1258 0 7.81152C0.000225735 3.49744 3.49744 0.000225731 7.81152 0ZM7.81152 1.5C4.32587 1.50023 1.50023 4.32587 1.5 7.81152C1.5 11.2974 4.32573 14.1238 7.81152 14.124C11.2975 14.124 14.124 11.2975 14.124 7.81152C14.1238 4.32573 11.2974 1.5 7.81152 1.5Z"
-              fill="#031373"
-            />
-          </Svg>
-        </View>
+          {/* Scanned product result card — tap to see full result */}
+          <TouchableOpacity style={styles.productCard} onPress={onProductTap} activeOpacity={0.8}>
+            <View style={styles.productScore}>
+              <Text style={styles.productScoreText}>8</Text>
+            </View>
+            <View style={styles.productInfo}>
+              <Text style={styles.productName}>
+                Chocolove Dark Chocolate, Ginger Crystallized
+              </Text>
+              <Text style={styles.productServing}>⅓ bar(s)</Text>
+            </View>
+            <View style={styles.productAdd}>
+              <Text style={styles.productAddText}>+</Text>
+            </View>
+          </TouchableOpacity>
 
-        {/* Cursor line (thin vertical bar like a text input cursor) */}
-        <View style={styles.cursorLine} />
+        </>
+      ) : (
+        <>
+          {/* Prompt text with "Search manually" link */}
+          <Text style={styles.prompt}>
+            Can't find the item?{' '}
+            <Text style={styles.promptLink}>Search manually</Text>
+          </Text>
 
-        {/* Placeholder text */}
-        <Text style={styles.searchText}>Enter barcode number</Text>
-      </View>
+          {/* Search input bar */}
+          <View style={styles.searchBar}>
+            {/* Search icon (magnifying glass) */}
+            <View style={styles.searchIcon}>
+              <Svg width={18} height={18} viewBox="0 0 17.5068 17.5068" fill="none">
+                <Path
+                  d="M7.81152 0C12.1258 0 15.6238 3.4973 15.624 7.81152C15.624 9.69866 14.9539 11.4289 13.8398 12.7793L17.2871 16.2256C17.58 16.5185 17.58 16.9942 17.2871 17.2871C16.9942 17.58 16.5185 17.58 16.2256 17.2871L12.7793 13.8398C11.4289 14.9539 9.69866 15.624 7.81152 15.624C3.4973 15.6238 0 12.1258 0 7.81152C0.000225735 3.49744 3.49744 0.000225731 7.81152 0ZM7.81152 1.5C4.32587 1.50023 1.50023 4.32587 1.5 7.81152C1.5 11.2974 4.32573 14.1238 7.81152 14.124C11.2975 14.124 14.124 11.2975 14.124 7.81152C14.1238 4.32573 11.2974 1.5 7.81152 1.5Z"
+                  fill="#031373"
+                />
+              </Svg>
+            </View>
 
-      {/* Home indicator — dark pill on white sheet */}
-      <HomeIndicator color="dark" />
+            {/* Cursor line (thin vertical bar like a text input cursor) */}
+            <View style={styles.cursorLine} />
+
+            {/* Placeholder text */}
+            <Text style={styles.searchText}>Enter barcode number</Text>
+          </View>
+
+        </>
+      )}
     </Animated.View>
   );
 }
@@ -79,6 +105,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
+    height: SHEET_HEIGHT,
     backgroundColor: '#ffffff',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
@@ -139,5 +166,65 @@ const styles = StyleSheet.create({
     color: '#5A577D',
     letterSpacing: -0.31,
     lineHeight: 24,
+  },
+
+  resultsLabel: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#8b8d9e',
+    letterSpacing: 1,
+    alignSelf: 'flex-start',
+  },
+
+  // === SCANNED PRODUCT CARD ===
+  productCard: {
+    width: '100%',
+    backgroundColor: '#dfe6f6',
+    borderRadius: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    gap: 14,
+  },
+  productScore: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#1a2151',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  productScoreText: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#ffffff',
+  },
+  productInfo: {
+    flex: 1,
+    gap: 2,
+  },
+  productName: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1a2151',
+  },
+  productServing: {
+    fontSize: 13,
+    color: '#8b8d9e',
+  },
+  productAdd: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#c5d0ea',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  productAddText: {
+    fontSize: 22,
+    fontWeight: '500',
+    color: '#1a2151',
+    marginTop: -2,
   },
 });
