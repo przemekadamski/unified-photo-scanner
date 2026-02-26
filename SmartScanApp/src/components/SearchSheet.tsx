@@ -131,8 +131,8 @@ const styles = StyleSheet.create({
     lineHeight: 24,
   },
   promptLink: {
-    color: '#031AA1',  // Blue link color from Figma
-    fontWeight: '500',
+    color: '#08070c',
+    fontWeight: '400',
   },
   // The search input bar
   searchBar: {

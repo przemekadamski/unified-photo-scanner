@@ -101,27 +101,22 @@ export default function CameraView({ mode, step = 1 }: Props) {
               </Text>
             </View>
           )}
-          {/* Step 2: Green "Barcode" detected pill */}
-          {step === 2 && (
-            <View style={styles.detectedPill}>
-              <View style={styles.detectedDot} />
-              <Text style={styles.detectedText}>{detectedLabel}</Text>
-            </View>
-          )}
         </View>
       )}
 
-      {/* Non-barcode modes: step 1 tooltip or step 2 detected pill */}
+      {/* Non-barcode modes: step 1 tooltip */}
       {!isBarcode && step === 1 && tooltipText !== '' && (
         <View style={styles.tooltip}>
           <Text style={styles.tooltipText}>{tooltipText}</Text>
         </View>
       )}
-      {!isBarcode && step === 2 && (
+
+      {/* Auto mode: step 2 green detected pill */}
+      {mode === 'Auto' && step === 2 && (
         <View style={styles.detectedPillWrapper}>
           <View style={styles.detectedPill}>
             <View style={styles.detectedDot} />
-            <Text style={styles.detectedText}>{detectedLabel}</Text>
+            <Text style={styles.detectedText}>Food Photo</Text>
           </View>
         </View>
       )}
