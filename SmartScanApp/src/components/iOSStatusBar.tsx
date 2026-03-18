@@ -1,9 +1,9 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { Svg, Path, Rect, Defs, ClipPath, G } from 'react-native-svg';
+import { Svg, Path, Rect } from 'react-native-svg';
 
-// Pixel-accurate iOS status bar matching the Figma design
-// Shows: time (9:41), cellular bars, wifi icon, battery icon
+// Pixel-accurate iOS 18 status bar for iPhone 16 (393pt wide frame)
+// Matches Apple HIG: time left, signal+wifi+battery right, Dynamic Island center
 
 export default function IOSStatusBar() {
   return (
@@ -13,77 +13,79 @@ export default function IOSStatusBar() {
         <Text style={styles.time}>9:41</Text>
       </View>
 
-      {/* Center: Dynamic Island spacer */}
+      {/* Center: Dynamic Island spacer (126×37pt pill) */}
       <View style={styles.dynamicIsland} />
 
       {/* Right: Cellular + Wi-Fi + Battery */}
       <View style={styles.iconsContainer}>
-        {/* Cellular signal bars */}
         <CellularIcon />
-        {/* Wi-Fi icon */}
         <WifiIcon />
-        {/* Battery icon */}
         <BatteryIcon />
       </View>
     </View>
   );
 }
 
-// 4 signal bars (ascending height, all filled = full signal)
+// 4 signal bars — iPhone 16 style (17×10.7pt)
 function CellularIcon() {
   return (
-    <Svg width={19} height={12} viewBox="0 0 19 12" fill="none">
-      <Rect x={0.5} y={8} width={3} height={4} rx={0.5} fill="black" />
-      <Rect x={5} y={5.5} width={3} height={6.5} rx={0.5} fill="black" />
-      <Rect x={9.5} y={3} width={3} height={9} rx={0.5} fill="black" />
-      <Rect x={14} y={0} width={3} height={12} rx={0.5} fill="black" />
+    <Svg width={17} height={10.7} viewBox="0 0 17 10.7" fill="none">
+      <Rect x={0} y={7.7} width={3} height={3} rx={0.5} fill="black" />
+      <Rect x={4.5} y={5.2} width={3} height={5.5} rx={0.5} fill="black" />
+      <Rect x={9} y={2.7} width={3} height={8} rx={0.5} fill="black" />
+      <Rect x={13.5} y={0} width={3} height={10.7} rx={0.5} fill="black" />
     </Svg>
   );
 }
 
-// Wi-Fi icon (3 arcs + dot)
+// Wi-Fi icon — iPhone 16 style (15.3×11pt, fan shape)
 function WifiIcon() {
   return (
-    <Svg width={17} height={12} viewBox="0 0 17 12" fill="none">
+    <Svg width={15.3} height={11} viewBox="0 0 15.3 11" fill="none">
+      {/* Outer arc */}
       <Path
-        d="M8.5 2.83C10.702 2.83 12.7 3.68 14.18 5.1L15.32 3.84C13.52 2.12 11.13 1.08 8.5 1.08C5.87 1.08 3.48 2.12 1.68 3.84L2.82 5.1C4.3 3.68 6.298 2.83 8.5 2.83Z"
+        d="M7.65 1.56c2.1 0 4.02.8 5.46 2.12l.94-1.06C12.25 1.02 10.04 0 7.65 0 5.26 0 3.05 1.02 1.25 2.62l.94 1.06C3.63 2.36 5.55 1.56 7.65 1.56Z"
         fill="black"
       />
+      {/* Middle arc */}
       <Path
-        d="M4.58 6.86C5.66 5.84 7.04 5.25 8.5 5.25C9.96 5.25 11.34 5.84 12.42 6.86L13.56 5.6C12.16 4.28 10.38 3.5 8.5 3.5C6.62 3.5 4.84 4.28 3.44 5.6L4.58 6.86Z"
+        d="M7.65 4.42c1.42 0 2.72.54 3.7 1.42l.94-1.06c-1.22-1.1-2.84-1.78-4.64-1.78s-3.42.68-4.64 1.78l.94 1.06c.98-.88 2.28-1.42 3.7-1.42Z"
         fill="black"
       />
+      {/* Inner arc */}
       <Path
-        d="M6.34 8.62C6.94 8.06 7.68 7.75 8.5 7.75C9.32 7.75 10.06 8.06 10.66 8.62L11.8 7.36C10.88 6.5 9.74 6 8.5 6C7.26 6 6.12 6.5 5.2 7.36L6.34 8.62Z"
+        d="M7.65 7.28c.74 0 1.42.28 1.94.74l.94-1.06c-.76-.68-1.78-1.1-2.88-1.1s-2.12.42-2.88 1.1l.94 1.06c.52-.46 1.2-.74 1.94-.74Z"
         fill="black"
       />
+      {/* Center dot */}
       <Path
-        d="M8.5 11C9.33 11 10 10.33 10 9.5C10 8.67 9.33 8 8.5 8C7.67 8 7 8.67 7 9.5C7 10.33 7.67 11 8.5 11Z"
+        d="M7.65 10.14c.66 0 1.2-.54 1.2-1.2s-.54-1.2-1.2-1.2-1.2.54-1.2 1.2.54 1.2 1.2 1.2Z"
         fill="black"
       />
     </Svg>
   );
 }
 
-// Battery icon (outline + fill level)
+// Battery icon — iPhone 16 style (25×11.3pt)
 function BatteryIcon() {
   return (
-    <Svg width={27} height={13} viewBox="0 0 27 13" fill="none">
+    <Svg width={25} height={11.3} viewBox="0 0 25 11.3" fill="none">
       {/* Battery body outline */}
       <Rect
         x={0.5}
         y={0.5}
-        width={22}
-        height={12}
-        rx={2.5}
+        width={21}
+        height={10.3}
+        rx={2.17}
         stroke="black"
         strokeOpacity={0.35}
+        strokeWidth={1}
       />
-      {/* Battery fill (full charge) */}
-      <Rect x={2} y={2} width={19} height={9} rx={1.5} fill="black" />
-      {/* Battery tip/nub on the right */}
+      {/* Battery fill level */}
+      <Rect x={1.83} y={1.83} width={18.33} height={7.63} rx={1.33} fill="black" />
+      {/* Battery cap/nub */}
       <Path
-        d="M24 4.5V8.5C24.83 8.17 25.5 7.17 25.5 6.5C25.5 5.83 24.83 4.83 24 4.5Z"
+        d="M23 3.73v3.83c.62-.26 1.17-1.08 1.17-1.91 0-.84-.55-1.66-1.17-1.92Z"
         fill="black"
         fillOpacity={0.4}
       />
@@ -92,27 +94,28 @@ function BatteryIcon() {
 }
 
 const styles = StyleSheet.create({
+  // Status bar: 54pt total (safe area top + bar content)
   container: {
     height: 54,
     flexDirection: 'row',
     alignItems: 'flex-end',
     justifyContent: 'space-between',
-    paddingBottom: 8,
+    paddingBottom: 10,
   },
   timeContainer: {
     flex: 1,
-    paddingLeft: 24,
+    paddingLeft: 27,
     alignItems: 'flex-start',
   },
   time: {
-    fontSize: 17,
+    fontSize: 15,
     fontWeight: '600',
     color: '#000000',
-    letterSpacing: 0,
+    letterSpacing: 0.2,
   },
-  // Space for the Dynamic Island notch area
+  // Dynamic Island: centered pill placeholder — kept narrow so time/icons spread to edges
   dynamicIsland: {
-    width: 124,
+    width: 80,
     height: 10,
   },
   iconsContainer: {
@@ -120,7 +123,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-end',
-    paddingRight: 20,
-    gap: 7,
+    paddingRight: 14,
+    gap: 5,
   },
 });

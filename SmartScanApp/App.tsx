@@ -1,8 +1,7 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
-  Image,
   StyleSheet,
   Animated,
   Platform,
@@ -12,474 +11,110 @@ import Header from './src/components/Header';
 import IOSStatusBar from './src/components/iOSStatusBar';
 import HomeIndicator from './src/components/HomeIndicator';
 import CameraView from './src/components/CameraView';
-import ModeTabs from './src/components/ModeTabs';
-import type { ScanMode } from './src/components/ModeTabs';
 import BottomControls from './src/components/BottomControls';
+import ModePicker from './src/components/ModePicker';
 import SearchSheet from './src/components/SearchSheet';
-// V2 imports
-import ModeTabsV2 from './src/components/ModeTabsV2';
-import type { ScanModeV2 } from './src/components/ModeTabsV2';
-import SearchSheetV2 from './src/components/SearchSheetV2';
+import Onboarding from './src/components/Onboarding';
+import Coachmark from './src/components/Coachmark';
+import MyDay from './src/components/MyDay';
+import FABMenu from './src/components/FABMenu';
+
+// Scan modes — kept here now that ModeTabs is removed
+type ScanMode = 'Barcode' | 'Food' | 'Auto' | 'Recipe' | 'Menu';
 // Result screens (step 3 of scan flows)
 import BarcodeResult from './src/components/BarcodeResult';
 import RecipeResult from './src/components/RecipeResult';
 import MenuResult from './src/components/MenuResult';
 import FoodResult from './src/components/FoodResult';
+import ServingPicker from './src/components/ServingPicker';
+import MealPicker from './src/components/MealPicker';
+import ManualSearch from './src/components/ManualSearch';
 
-// ─── Version Switcher ─────────────────────────────────
-// This is the top-level component that wraps everything.
-// It shows a toggle bar above the phone frame so you can
-// switch between two versions of the app.
+// ─── App Entry Point ──────────────────────────────────
+// Navigation: MyDay (home) → FAB menu → Scanner
+// The phone frame wraps everything at 393×852px.
+type Screen = 'myday' | 'fab' | 'scanner';
+
 export default function App() {
-  // Track which version is currently shown (1 or 2)
-  const [activeVersion, setActiveVersion] = useState<1 | 2>(1);
+  const [screen, setScreen] = useState<Screen>('myday');
+  // Track whether scanner has been visited (keep it mounted for smooth transitions)
+  const [scannerVisited, setScannerVisited] = useState(false);
+  // Animated opacity for scanner fade in/out
+  const scannerOpacity = useRef(new Animated.Value(0)).current;
+
+  const navigateTo = useCallback((target: Screen) => {
+    if (target === 'scanner') {
+      setScannerVisited(true);
+      setScreen(target);
+      // Fade scanner in
+      Animated.spring(scannerOpacity, {
+        toValue: 1,
+        tension: 200,
+        friction: 20,
+        useNativeDriver: false,
+      }).start();
+    } else if (screen === 'scanner') {
+      // Fade scanner out, then switch screen
+      Animated.spring(scannerOpacity, {
+        toValue: 0,
+        tension: 200,
+        friction: 20,
+        useNativeDriver: false,
+      }).start(() => {
+        setScreen(target);
+      });
+    } else {
+      setScreen(target);
+    }
+  }, [screen, scannerOpacity]);
 
   return (
     <View style={styles.appRoot}>
-      {/* Version switcher bar — sits above the phone frame */}
-      <View style={styles.switcherBar}>
-        <TouchableOpacity
-          style={[
-            styles.switcherTab,
-            activeVersion === 1 && styles.switcherTabActive,
-          ]}
-          onPress={() => setActiveVersion(1)}
-        >
-          <Text
-            style={[
-              styles.switcherText,
-              activeVersion === 1 && styles.switcherTextActive,
-            ]}
-          >
-            Version 1
-          </Text>
-        </TouchableOpacity>
+      <View style={styles.outerFrame}>
+        <View style={styles.phoneFrame}>
+          {/* MyDay home screen — base layer, visible when not in scanner */}
+          {screen !== 'scanner' && (
+            <MyDay onFABTap={() => navigateTo('fab')} />
+          )}
 
-        <TouchableOpacity
-          style={[
-            styles.switcherTab,
-            activeVersion === 2 && styles.switcherTabActive,
-          ]}
-          onPress={() => setActiveVersion(2)}
-        >
-          <Text
-            style={[
-              styles.switcherText,
-              activeVersion === 2 && styles.switcherTextActive,
-            ]}
-          >
-            Version 2
-          </Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Show the selected version */}
-      {activeVersion === 1 ? (
-        <SmartScanV1 />
-      ) : (
-        <SmartScanV2 />
-      )}
-    </View>
-  );
-}
-
-// ─── Version 2 (Redesigned controls with pill tabs) ───
-// Key differences from V1:
-// - Mode tabs are inside a dark pill-shaped container (#181818)
-// - Only 4 modes: Barcode, Food, Auto, Recipe (no Menu)
-// - Active tab has subtle white bg + yellow text
-// - In barcode mode: no shutter button, tabs/gallery move up
-function SmartScanV2() {
-  // V2 uses a reduced set of modes (no Menu)
-  const [activeMode, setActiveMode] = useState<ScanModeV2>('Auto');
-  // Displayed mode updates instantly (for pill highlight);
-  // activeMode updates at blur midpoint (for camera image)
-  const [displayedMode, setDisplayedMode] = useState<ScanModeV2>('Auto');
-
-  // Same blur animation as V1 for smooth mode transitions
-  const blurAnim = useRef(new Animated.Value(0)).current;
-  const isTransitioning = useRef(false);
-  const blurOpacity = blurAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [1, 0.85],
-  });
-  const [blurPx, setBlurPx] = useState(0);
-  blurAnim.addListener(({ value }) => {
-    setBlurPx(value * 4);
-  });
-
-  // ── Controls layout animation (barcode ↔ other modes) ──
-  // 0 = normal mode (shutter visible, elements at bottom)
-  // 1 = barcode mode (shutter hidden, elements slide up)
-  const controlsAnim = useRef(new Animated.Value(0)).current;
-  // Shutter fades out when switching to barcode
-  const shutterOpacity = controlsAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [1, 0],
-  });
-  // Gallery slides from bottom (149) to top (24)
-  const galleryTop = controlsAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [149, 24],
-  });
-  // Pill tabs slide from bottom (138) to top (16)
-  const pillTop = controlsAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [138, 16],
-  });
-  // Controls SearchSheetV2 visibility — set at transition START so it
-  // animates in parallel with the pill/gallery, not after the mode switch
-  const [sheetVisible, setSheetVisible] = useState(false);
-
-  const handleModeChange = useCallback((newMode: ScanModeV2) => {
-    if (newMode === activeMode || isTransitioning.current) return;
-    isTransitioning.current = true;
-    // Reset step flow when switching modes
-    setStep(1);
-    setLoading(false);
-
-    // Build animations — blur always runs, controls animate if switching to/from barcode
-    const switchingToBarcode = newMode === 'Barcode';
-    const switchingFromBarcode = activeMode === 'Barcode';
-    // Update pill highlight immediately — same time as slide-up
-    setDisplayedMode(newMode);
-    // Trigger sheet slide at the same time as pill/gallery animation
-    if (switchingToBarcode) setSheetVisible(true);
-    if (switchingFromBarcode) setSheetVisible(false);
-    const blurIn = Animated.timing(blurAnim, {
-      toValue: 1, duration: 350, useNativeDriver: false,
-    });
-    const animations: Animated.CompositeAnimation[] = [blurIn];
-    if (switchingToBarcode || switchingFromBarcode) {
-      animations.push(
-        Animated.timing(controlsAnim, {
-          toValue: switchingToBarcode ? 1 : 0,
-          duration: 350,
-          useNativeDriver: false,
-        }),
-      );
-    }
-
-    // Run blur + controls transition in parallel
-    Animated.parallel(animations).start(() => {
-      setActiveMode(newMode);
-      Animated.timing(blurAnim, {
-        toValue: 0,
-        duration: 350,
-        useNativeDriver: false,
-      }).start(() => {
-        isTransitioning.current = false;
-      });
-    });
-  }, [activeMode, blurAnim, controlsAnim]);
-
-  const isBarcode = activeMode === 'Barcode';
-  const isRecipe = activeMode === 'Recipe';
-  const isFood = activeMode === 'Food';
-  const isAuto = activeMode === 'Auto';
-
-  // ── Step flow state (ported from V1) ─────────────────
-  // Step in the scan flow (1 = scanner, 2 = detected, 3 = result)
-  const [step, setStep] = useState(1);
-  // Shutter flash animation: black overlay that flashes 0 → 1 → 0
-  const shutterAnim = useRef(new Animated.Value(0)).current;
-  // Drawer slide-up animation: 0 = off-screen, 1 = fully visible
-  const drawerAnim = useRef(new Animated.Value(0)).current;
-  const [drawerVisible, setDrawerVisible] = useState(false);
-  // Loading state — shown on camera between shutter flash and result drawer
-  const [loading, setLoading] = useState(false);
-  const spinAnim = useRef(new Animated.Value(0)).current;
-  // For barcode: product card shows first, full result opens on card tap
-  const [fullResultOpen, setFullResultOpen] = useState(false);
-
-  // Plays the shutter flash effect (black flash over camera area only).
-  // onPeak fires at max opacity so loading can start while flash still covers screen.
-  const playShutter = useCallback((opts?: { onPeak?: () => void; onComplete?: () => void }) => {
-    shutterAnim.setValue(0);
-    Animated.timing(shutterAnim, {
-      toValue: 1, duration: 50, useNativeDriver: false,
-    }).start(() => {
-      if (opts?.onPeak) opts.onPeak();
-      Animated.timing(shutterAnim, {
-        toValue: 0, duration: 150, useNativeDriver: false,
-      }).start(() => {
-        if (opts?.onComplete) opts.onComplete();
-      });
-    });
-  }, [shutterAnim]);
-
-  // Slides the result drawer up from the bottom
-  const openDrawer = useCallback(() => {
-    setDrawerVisible(true);
-    drawerAnim.setValue(0);
-    Animated.timing(drawerAnim, {
-      toValue: 1, duration: 350, useNativeDriver: false,
-    }).start();
-  }, [drawerAnim]);
-
-  // Slides the result drawer back down and unmounts it
-  const closeDrawer = useCallback(() => {
-    Animated.timing(drawerAnim, {
-      toValue: 0, duration: 300, useNativeDriver: false,
-    }).start(() => {
-      setDrawerVisible(false);
-      setFullResultOpen(false);
-      setLoading(false);
-      setStep(1);
-    });
-  }, [drawerAnim]);
-
-  // Advance scan flow: step 1→2 just advances, step 2→3 does shutter→loading→result
-  const advanceStep = useCallback(() => {
-    if (step === 2) {
-      const isBarcodeMode = activeMode === 'Barcode';
-      const loadingDelay = isBarcodeMode ? 500 : 1000;
-      playShutter({
-        onPeak: () => {
-          setLoading(true);
-          setStep(3);
-          spinAnim.setValue(0);
-          Animated.loop(
-            Animated.timing(spinAnim, {
-              toValue: 1, duration: 1000, useNativeDriver: false,
-            }),
-          ).start();
-          setTimeout(() => {
-            setLoading(false);
-            spinAnim.stopAnimation();
-            openDrawer();
-          }, loadingDelay);
-        },
-      });
-    } else if (step < 3) {
-      setStep(step + 1);
-    }
-  }, [step, activeMode, playShutter, openDrawer, spinAnim]);
-
-  // Go back to step 1 (close result screen)
-  const resetToScanner = useCallback(() => {
-    closeDrawer();
-  }, [closeDrawer]);
-
-  // Shutter button tapped — advances the step flow
-  const handleShutter = useCallback(() => {
-    advanceStep();
-  }, [advanceStep]);
-
-  // Tapping the product card in SearchSheetV2 opens full BarcodeResult drawer
-  const handleProductTap = useCallback(() => {
-    setFullResultOpen(true);
-    drawerAnim.setValue(0);
-    Animated.timing(drawerAnim, {
-      toValue: 1, duration: 350, useNativeDriver: false,
-    }).start();
-  }, [drawerAnim]);
-
-  // Which result component to show (no Menu in V2)
-  const ResultScreen = isBarcode
-    ? BarcodeResult
-    : isRecipe
-      ? RecipeResult
-      : (isFood || isAuto)
-        ? FoodResult
-        : null;
-
-  // Drawer slides up from bottom: translateY 852 → 0
-  const drawerTranslateY = drawerAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [852, 0],
-  });
-
-  return (
-    <View style={styles.outerWrapper}>
-      <View style={styles.root}>
-        {/* iOS status bar */}
-        <IOSStatusBar />
-
-        <View style={styles.safeArea}>
-          {/* Header area — same as V1 */}
-          <View style={styles.headerArea}>
-            <Header />
-            <Text style={styles.subtitle}>
-              Scan a menu, food, recipe, or barcode to get started.
-            </Text>
-          </View>
-
-          {/* Camera preview — tappable in barcode mode to advance step flow */}
-          <TouchableOpacity
-            activeOpacity={1}
-            onPress={isBarcode ? advanceStep : undefined}
-            style={styles.cameraWrapper}
-          >
-            <Animated.View
-              style={[
-                { flex: 1 },
-                {
-                  opacity: blurOpacity,
-                  ...(Platform.OS === 'web'
-                    ? { filter: `blur(${blurPx}px)` as any }
-                    : {}),
-                },
-              ]}
-            >
-              {/* Cap step at 2 so the focus image stays visible during loading */}
-              <CameraView mode={activeMode} step={Math.min(step, 2)} />
-            </Animated.View>
-
-            {/* Shutter flash — black overlay on camera area only */}
-            <Animated.View
-              pointerEvents="none"
-              style={[styles.shutterFlash, { opacity: shutterAnim }]}
+          {/* FAB menu overlay — blurred background over MyDay */}
+          {screen === 'fab' && (
+            <FABMenu
+              onClose={() => navigateTo('myday')}
+              onSmartScan={() => navigateTo('scanner')}
             />
+          )}
 
-            {/* Loading overlay — shown after shutter flash, before result drawer */}
-            {loading && (
-              <View style={styles.loadingOverlay}>
-                <Animated.View
-                  style={[
-                    styles.loadingSpinner,
-                    {
-                      transform: [{
-                        rotate: spinAnim.interpolate({
-                          inputRange: [0, 1],
-                          outputRange: ['0deg', '360deg'],
-                        }),
-                      }],
-                    },
-                  ]}
-                />
-                <Text style={styles.loadingText}>Analyzing...</Text>
-              </View>
-            )}
-          </TouchableOpacity>
-
-          {/* ── V2 Controls Area ─────────────────────────── */}
-          {/* Uses absolute positioning to match Figma layout exactly */}
-          <View style={v2Styles.controlsArea}>
-
-            {/* Shutter button — always rendered, fades out smoothly in barcode mode */}
+          {/* Scanner — fades in/out with spring animation */}
+          {scannerVisited && (
             <Animated.View
-              pointerEvents={isBarcode ? 'none' : 'auto'}
-              style={[v2Styles.shutterPosition, { opacity: shutterOpacity }]}
+              style={[styles.scannerLayer, { opacity: scannerOpacity }]}
+              pointerEvents={screen === 'scanner' ? 'auto' : 'none'}
             >
-              <TouchableOpacity style={v2Styles.shutterButton} onPress={handleShutter}>
-                <View style={v2Styles.shutterInner} />
-              </TouchableOpacity>
+              <SmartScanV1 onBack={() => navigateTo('myday')} />
             </Animated.View>
-
-            {/* Gallery thumbnail icon — slides up/down smoothly */}
-            <Animated.View style={[v2Styles.galleryPosition, { top: galleryTop }]}>
-              <Image
-                source={require('./assets/images/Camera.png')}
-                style={v2Styles.galleryImage}
-              />
-            </Animated.View>
-
-            {/* Pill-shaped mode tabs — slides up/down smoothly */}
-            <Animated.View style={[v2Styles.pillPosition, { top: pillTop }]}>
-              <ModeTabsV2
-                activeMode={displayedMode}
-                onModeChange={handleModeChange}
-              />
-            </Animated.View>
-
-            {/* Home indicator bar (light on dark bg) */}
-            <View style={v2Styles.homeBar} />
-          </View>
+          )}
         </View>
-
-        {/* V2 search sheet — slides up in sync with pill tabs */}
-        <SearchSheetV2
-          visible={sheetVisible}
-          scanned={drawerVisible}
-          onProductTap={handleProductTap}
-        />
-
-        {/* Result drawer — slides up from bottom over the scanner */}
-        {/* Barcode: opens on product card tap. Others: opens after loading. */}
-        {((isBarcode && fullResultOpen) || (!isBarcode && drawerVisible)) && ResultScreen && (
-          <Animated.View
-            style={[
-              styles.resultDrawer,
-              { transform: [{ translateY: drawerTranslateY }] },
-            ]}
-          >
-            <ResultScreen onClose={resetToScanner} />
-          </Animated.View>
-        )}
       </View>
     </View>
   );
 }
 
-// V2-specific styles (separate from shared styles)
-const v2Styles = StyleSheet.create({
-  // Dark bottom controls section — same height as V1, absolute positioning inside
-  controlsArea: {
-    backgroundColor: '#08070c',
-    height: 218,
-    position: 'relative',
-  },
-  // Shutter button — positioned wrapper (animated opacity)
-  shutterPosition: {
-    position: 'absolute',
-    top: 32,
-    left: 160.5, // (393 - 72) / 2 to center the 72px button
-  },
-  // Shutter button — appearance styling only (no position)
-  shutterButton: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    borderWidth: 4,
-    borderColor: '#ffffff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  shutterInner: {
-    width: 58,
-    height: 58,
-    borderRadius: 29,
-    backgroundColor: '#ffffff',
-  },
-  // Gallery — positioned wrapper (animated top: 149 ↔ 24)
-  galleryPosition: {
-    position: 'absolute',
-    left: 32,
-  },
-  // Gallery — image sizing only (no position)
-  galleryImage: {
-    width: 30,
-    height: 30,
-    borderRadius: 6,
-  },
-  // Pill tabs — positioned wrapper (animated top: 138 ↔ 16)
-  pillPosition: {
-    position: 'absolute',
-    left: 104, // (393 - 185) / 2 to center the 185px pill
-  },
-  // Home indicator bar at the very bottom
-  homeBar: {
-    position: 'absolute',
-    bottom: 8,
-    left: 129, // (393 - 135) / 2 to center
-    width: 135,
-    height: 5,
-    borderRadius: 50,
-    backgroundColor: '#323232',
-  },
-});
-
-// ─── Version 1 (Original SmartScanApp) ────────────────
+// ─── SmartScanV1 ──────────────────────────────────────
 // Barcode flow has 3 steps:
 //   Step 1: Scanner with barcode box + "Align barcode" tooltip + SearchSheet
 //   Step 2: Barcode detected — green "Barcode" pill + SearchSheet
 //   Step 3: Full "Track food" result screen
-function SmartScanV1() {
+function SmartScanV1({ onBack }: { onBack?: () => void }) {
   // Track which scan mode is currently active
   const [activeMode, setActiveMode] = useState<ScanMode>('Auto');
   // Step in the barcode scan flow (1 = scanner, 2 = detected, 3 = result)
   const [step, setStep] = useState(1);
+  // Whether the mode picker grid overlay is visible
+  const [pickerVisible, setPickerVisible] = useState(false);
+  // Onboarding: shown on first load, then coachmark after dismissal
+  const [showOnboarding, setShowOnboarding] = useState(true);
+  const [showCoachmark, setShowCoachmark] = useState(false);
 
   // Shutter flash animation: white overlay that flashes 0 → 1 → 0
   const shutterAnim = useRef(new Animated.Value(0)).current;
@@ -530,15 +165,18 @@ function SmartScanV1() {
 
   // Slides the result drawer back down and unmounts it
   const closeDrawer = useCallback(() => {
-    Animated.timing(drawerAnim, {
+    Animated.spring(drawerAnim, {
       toValue: 0,
-      duration: 300,
+      tension: 65,
+      friction: 11,
       useNativeDriver: false,
     }).start(() => {
       setDrawerVisible(false);
       setFullResultOpen(false);
       setLoading(false);
       setStep(1);
+      // Reset to scanning state when returning to barcode step 1
+      setBarcodeScanning(true);
     });
   }, [drawerAnim]);
 
@@ -564,23 +202,27 @@ function SmartScanV1() {
   const handleModeChange = useCallback((newMode: ScanMode) => {
     if (newMode === activeMode || isTransitioning.current) return;
     isTransitioning.current = true;
-    // Reset step and clear loading when switching modes
+    // Reset step, clear loading, and reset barcode scanning state
     setStep(1);
     setLoading(false);
+    // When switching to barcode mode, start in "Scanning..." state
+    setBarcodeScanning(newMode === 'Barcode');
 
-    // Blur in: 0 → 1 over first half (350ms)
-    Animated.timing(blurAnim, {
+    // Blur in with spring (iOS-style smooth transition)
+    Animated.spring(blurAnim, {
       toValue: 1,
-      duration: 350,
+      tension: 100,
+      friction: 15,
       useNativeDriver: false,
     }).start(() => {
       // At peak blur, switch the mode
       setActiveMode(newMode);
 
-      // Blur out: 1 → 0 over second half (350ms)
-      Animated.timing(blurAnim, {
+      // Blur out with spring
+      Animated.spring(blurAnim, {
         toValue: 0,
-        duration: 350,
+        tension: 100,
+        friction: 15,
         useNativeDriver: false,
       }).start(() => {
         isTransitioning.current = false;
@@ -620,6 +262,12 @@ function SmartScanV1() {
         },
       });
     } else if (step < 3) {
+      // When advancing from step 1→2 in barcode mode:
+      // stop scanning state and show the product card in SearchSheet
+      if (step === 1 && activeMode === 'Barcode') {
+        setBarcodeScanning(false);
+        setDrawerVisible(true);
+      }
       setStep(step + 1);
     }
   }, [step, activeMode, playShutter, openDrawer, spinAnim]);
@@ -654,9 +302,26 @@ function SmartScanV1() {
           ? FoodResult
           : null;
 
+  // Whether the barcode scanner is in "Scanning..." state
+  // (shows spinner + "Search manually" link instead of search input)
+  const [barcodeScanning, setBarcodeScanning] = useState(true);
+
+  // Picker sheet visibility
+  const [showServingPicker, setShowServingPicker] = useState(false);
+  const [showMealPicker, setShowMealPicker] = useState(false);
+  // Selected values for dropdowns (updated when picker "Update" is tapped)
+  const [selectedServing, setSelectedServing] = useState('3 oz');
+  const [selectedMeal, setSelectedMeal] = useState('Breakfast');
+
+  // No auto-timer — barcode "Scanning..." stays until user taps the camera image.
+  // The tap calls advanceStep() which handles the step 1→2 transition.
+
   // Whether the full-screen result drawer is open
   // (barcode shows product card first, then drawer on tap)
   const [fullResultOpen, setFullResultOpen] = useState(false);
+
+  // Whether the ManualSearch sheet is open (triggered from "Search manually" in scanning state)
+  const [manualSearchOpen, setManualSearchOpen] = useState(false);
 
   // Tapping the product card in SearchSheet opens the full BarcodeResult drawer
   const handleProductTap = useCallback(() => {
@@ -677,15 +342,14 @@ function SmartScanV1() {
   });
 
   return (
-    <View style={styles.outerWrapper}>
-      <View style={styles.root}>
-        {/* iOS status bar: time, signal, wifi, battery */}
-        <IOSStatusBar />
+    <View style={styles.scannerContainer}>
+      {/* iOS status bar: time, signal, wifi, battery */}
+      <IOSStatusBar />
 
         <View style={styles.safeArea}>
           {/* Light background behind the header area */}
           <View style={styles.headerArea}>
-            <Header />
+            <Header onBack={onBack} />
             {/* Subtitle text below the header */}
             <Text style={styles.subtitle}>
               Scan a menu, food, recipe, or barcode to get started.
@@ -741,13 +405,15 @@ function SmartScanV1() {
 
           </TouchableOpacity>
 
-          {/* Dark bottom section with mode tabs and controls */}
+          {/* Dark bottom section with shutter + gallery + mode pill */}
           <View style={styles.controlsArea}>
-            {/* Mode selector tabs */}
-            <ModeTabs activeMode={activeMode} onModeChange={handleModeChange} />
-
-            {/* Shutter button + gallery icon — always visible */}
-            <BottomControls visible={true} onShutter={handleShutter} />
+            {/* Shutter button (center), gallery icon (left), mode pill (right) */}
+            <BottomControls
+              visible={true}
+              onShutter={handleShutter}
+              activeMode={activeMode}
+              onModePillTap={() => setPickerVisible(!pickerVisible)}
+            />
 
             {/* Home indicator — light pill on dark background */}
             <HomeIndicator color="light" />
@@ -759,10 +425,27 @@ function SmartScanV1() {
         {isBarcode && (
           <SearchSheet
             visible={true}
+            scanning={barcodeScanning}
             scanned={drawerVisible}
             onProductTap={handleProductTap}
+            onSearchManually={() => setManualSearchOpen(true)}
+            onServingTap={() => setShowServingPicker(true)}
+            onMealTap={() => setShowMealPicker(true)}
+            servingLabel={selectedServing}
+            mealLabel={selectedMeal}
           />
         )}
+
+        {/* Mode picker grid overlay — appears when tapping the mode pill */}
+        <ModePicker
+          visible={pickerVisible}
+          activeMode={activeMode}
+          onSelectMode={(mode) => {
+            setPickerVisible(false);    // close picker
+            handleModeChange(mode);     // switch mode with blur animation
+          }}
+          onClose={() => setPickerVisible(false)}
+        />
 
         {/* Result drawer — slides up from bottom over the scanner */}
         {/* Barcode: opens on product card tap. Recipe/Menu: opens after loading. */}
@@ -776,55 +459,90 @@ function SmartScanV1() {
             <ResultScreen onClose={resetToScanner} />
           </Animated.View>
         )}
-      </View>
+
+        {/* Serving size picker — half-sheet overlay */}
+        <ServingPicker
+          visible={showServingPicker}
+          onClose={() => setShowServingPicker(false)}
+          onUpdate={(serving) => {
+            setSelectedServing(serving);
+            setShowServingPicker(false);
+          }}
+        />
+
+        {/* Meal time picker — half-sheet overlay */}
+        <MealPicker
+          visible={showMealPicker}
+          onClose={() => setShowMealPicker(false)}
+          onUpdate={(meal) => {
+            setSelectedMeal(meal);
+            setShowMealPicker(false);
+          }}
+        />
+
+        {/* Manual search sheet — opens from "Search manually" in barcode scanning state */}
+        <ManualSearch
+          visible={manualSearchOpen}
+          onClose={() => setManualSearchOpen(false)}
+          onProductTap={() => {
+            // Close ManualSearch, then open full BarcodeResult
+            setManualSearchOpen(false);
+            handleProductTap();
+          }}
+        />
+
+        {/* Coachmark tooltip — appears after onboarding is dismissed */}
+        <Coachmark
+          visible={showCoachmark}
+          onDismiss={() => setShowCoachmark(false)}
+        />
+
+        {/* Onboarding modal — shown on first load, covers entire screen */}
+        {showOnboarding && (
+          <Onboarding
+            onDismiss={() => {
+              setShowOnboarding(false);
+              setShowCoachmark(true); // show coachmark after onboarding
+            }}
+          />
+        )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  // Full-screen container that holds switcher + phone frame
+  // Full-screen container that centers the phone frame
   appRoot: {
     flex: 1,
     backgroundColor: '#1a1a1a',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  // ─── Switcher bar styles ───
-  switcherBar: {
-    flexDirection: 'row',
-    marginBottom: 16,
-    backgroundColor: '#2a2a2a',
-    borderRadius: 10,
-    padding: 4,
-  },
-  switcherTab: {
-    paddingHorizontal: 20,
-    paddingVertical: 8,
-    borderRadius: 8,
-  },
-  switcherTabActive: {
-    backgroundColor: '#ffffff',
-  },
-  switcherText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#888888',
-  },
-  switcherTextActive: {
-    color: '#000000',
-  },
-  // ─── Phone frame styles (unchanged) ───
-  // Centers the 393px phone frame in the browser window
-  outerWrapper: {
+  // Outer centering wrapper for the phone frame
+  outerFrame: {
     alignItems: 'center',
     justifyContent: 'center',
   },
-  root: {
+  // 393×852 phone frame with rounded corners
+  phoneFrame: {
     width: 393,
     height: 852,
     backgroundColor: '#f4f4f4',
     overflow: 'hidden',
     borderRadius: 32,
+  },
+  // Scanner layer — absolute fill for fade transitions
+  scannerLayer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  // Scanner fills the phone frame
+  scannerContainer: {
+    flex: 1,
+    backgroundColor: '#f4f4f4',
   },
   safeArea: {
     flex: 1,
@@ -889,13 +607,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#000000',
   },
   // Full-screen drawer that slides up from below to show result screens
+  // Transparent — each result component handles its own overlay
   resultDrawer: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: '#f4f4f4',
+    backgroundColor: 'transparent',
     borderTopLeftRadius: 0,
     borderTopRightRadius: 0,
   },

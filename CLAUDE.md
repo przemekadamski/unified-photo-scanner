@@ -20,7 +20,7 @@ The **Recipe Points Estimator** backend already exists in production — it's th
 ├── .gitignore
 │
 ├── SmartScanApp/                ← React Native Expo prototype app
-│   ├── App.tsx                  ← Main entry: version switcher + V1 & V2 components
+│   ├── App.tsx                  ← Main entry: screen navigation (MyDay → FABMenu → Scanner)
 │   ├── app.json                 ← Expo config (baseUrl for GitHub Pages)
 │   ├── package.json             ← Dependencies
 │   ├── tsconfig.json            ← TypeScript config (extends expo)
@@ -29,11 +29,7 @@ The **Recipe Points Estimator** backend already exists in production — it's th
 │   └── src/components/          ← All UI components (see Component Inventory below)
 │
 ├── assets/                      ← Design reference images (barcode, food, menu, recipe photos)
-├── docs/                        ← GitHub Pages deployment (built Expo web output)
-│
-├── prototypes.html              ← Result screen prototypes (Barcode, Food, Menu, Recipe results)
-├── scanner-screens.html         ← Missing screens & error states reference
-└── smart-scan.html              ← Interactive scanner UI with mode transitions
+└── docs/                        ← GitHub Pages deployment (built Expo web output)
 ```
 
 ## Tech Stack
@@ -63,33 +59,43 @@ GitHub Pages URL: `https://przemekadamski.github.io/unified-photo-scanner/`
 
 All components live in `SmartScanApp/src/components/`:
 
+### Home & Navigation Components
+| Component | Description |
+|---|---|
+| **MyDay.tsx** | Home/dashboard screen: date row, points card, macros (protein, carbs, fat, fiber, calories), bottom tab bar. Receives `onFABTap` callback |
+| **FABMenu.tsx** | Quick-add bottom sheet (FAB "+" overlay on MyDay): grid of 7 action buttons (Food, Activity, Weight, Water, Sleep, Glucose, Smart Scan) + recently tracked items list. Receives `onClose` and `onSmartScan` |
+| **Onboarding.tsx** | First-load modal: step indicator, food photo preview, "One scan does it all" headline, "Next" button. Receives `onDismiss` |
+| **Coachmark.tsx** | Post-onboarding tooltip explaining Auto mode with "Got it" dismiss button |
+
 ### Scanner UI Components
 | Component | Description |
 |---|---|
-| **Header.tsx** | Top bar: back arrow, "Smart Scan" title, flash-off icon |
+| **Header.tsx** | Top bar: back arrow, "Smart Scan" title, flash-off icon. Receives `onBack` |
 | **iOSStatusBar.tsx** | Pixel-accurate iOS status bar (9:41, signal, wifi, battery) |
 | **CameraView.tsx** | Camera preview — mode-specific photos, focus images at step 2, detected pills, corner brackets, barcode box |
-| **ModeTabs.tsx** | V1 mode tabs: 5 modes (Barcode, Food, Auto, Recipe, Menu), yellow active highlight |
-| **ModeTabsV2.tsx** | V2 pill tabs: 4 modes (no Menu), glass effect + yellow text on active tab |
-| **BottomControls.tsx** | Gallery icon + shutter button (72px white circle), `onShutter` callback |
-| **SearchSheet.tsx** | V1 barcode sheet: drag handle, prompt, search input; shows product card when `scanned=true` |
-| **SearchSheetV2.tsx** | V2 barcode sheet: search bar; shows product card when `scanned=true`; height 130px (search) / 165px (scanned) |
+| **BottomControls.tsx** | Gallery icon (left) + shutter button (center, 72px white circle) + mode pill (right, yellow label). Receives `onShutter` and `onModePillTap` |
+| **ModePicker.tsx** | 5-mode grid overlay (3×2): Barcode, Food, Auto, Recipe, Menu with icons. Appears on mode pill tap. Receives `visible`, `activeMode`, `onSelectMode`, `onClose` |
+| **SearchSheet.tsx** | Barcode mode bottom drawer: search prompt + input on step 1; 3-row card_food layout when `scanned=true` (name + serving/meal dropdowns + nutrition tags, tappable via `onProductTap`). Dynamic height: 155px (search) / 250px (scanned) |
 | **HomeIndicator.tsx** | iOS home indicator pill (light/dark variants) |
 
 ### Result Screen Components
 | Component | Description |
 |---|---|
 | **BarcodeResult.tsx** | Full "Track food" screen — product name, score, nutrition facts, points |
-| **FoodResult.tsx** | "Lunch" result — detected food items with scores, servings, "Track Recipe" button. Used for Auto + Food modes |
+| **FoodResult.tsx** | iOS sheet overlay for Auto + Food modes. "Lunch" header + food cards (3-row: name+swap, serving dropdown, points+tags+delete) + "Add new food" card + Track button. Dismiss via X, tap scrim, or swipe down. Swap icon pushes to FoodSearch with iOS transition |
+| **FoodSearch.tsx** | "Search to replace" screen rendered inside FoodResult's sheet. Search bar + similar results cards with swap icons. Exports `FoodSearchContent` (sheet content) and `IOSKeyboard` (static keyboard rendered below sheet) |
 | **RecipeResult.tsx** | "Recipe Result" — parsed recipe with ingredients list, servings, per-serving points |
-| **MenuResult.tsx** | "Menu Result" — restaurant name, list of menu items with scores and chevrons (V1 only) |
+| **MenuResult.tsx** | "Menu Result" — restaurant name, list of menu items with scores and chevrons |
 
 ## App Architecture
 
-### Version Switcher
-`App.tsx` renders a toggle bar above the phone frame (393x852px) to switch between two competing UI designs.
+### Screen Navigation
+`App.tsx` manages 3 screens inside a phone frame (393×852px):
+1. **"myday"** → `MyDay` — home dashboard with points, macros, tab bar
+2. **"fab"** → `MyDay` + `FABMenu` overlay (blur backdrop) — tapping "Smart Scan" navigates to scanner
+3. **"scanner"** → `SmartScanV1` — the full scanner with mode picker, camera, and results
 
-### Step Flow (both versions)
+### Step Flow (scanner)
 All scan modes use a 3-step flow:
 1. **Step 1 — Scanner:** Mode-specific camera view with tooltip (e.g. "Point at a recipe to scan it")
 2. **Step 2 — Detected:** Focus image + green detected pill (e.g. "Recipe", "Barcode", "Food Photo")
@@ -99,27 +105,19 @@ All scan modes use a 3-step flow:
 
 **Loading:** Dark overlay (0.6 opacity) with spinning ring + "Analyzing..." text. Barcode: 500ms, others: 1000ms.
 
-**Result drawer:** Slides up from bottom (translateY 852→0, 350ms). Closes with slide-down + resets to step 1.
+**Result drawer:** Non-food modes: slides up from bottom (translateY 852→0, 350ms), closes with slide-down + resets to step 1. Food/Auto modes: iOS sheet overlay (FoodResult) with spring animation, dismiss via X button, tap scrim, or swipe-down on drag handle.
 
-**Barcode unique flow:** Camera image is tappable (advances step). After loading, product card appears in SearchSheet instead of full drawer. Tapping product card opens full BarcodeResult drawer.
+**Barcode unique flow:** Camera image is tappable (advances step). After loading, product card appears in SearchSheet (3-row card_food layout) instead of full drawer. Tapping product card opens full BarcodeResult drawer.
 
-### Version 1 (SmartScanV1)
+**Food swap-to-search flow:** Tapping swap icon on a food card in FoodResult pushes "Search to replace" screen (FoodSearch) with iOS push transition (food slides left, search slides in from right). iOS keyboard renders below the sheet. X button reverses the transition.
+
+### Scanner (SmartScanV1)
 - 5 scan modes: Barcode, Food, Auto, Recipe, Menu
-- Full-width mode tabs below camera
+- Mode pill in BottomControls (right side) — tap to open ModePicker grid overlay
 - Shutter button always visible, wired to `advanceStep()`
 - SearchSheet with drag handle, prompt text, and scanned product card state
-- HomeIndicator in controls area (global, not in sheet)
-
-### Version 2 (SmartScanV2)
-- 4 scan modes: Barcode, Food, Auto, Recipe (no Menu)
-- Dark pill-shaped tab container (#181818) with glass effect on active tab
-- **Animated controls transition** when switching to/from Barcode (350ms, parallel with blur):
-  - Shutter button: opacity 1→0 (fades out)
-  - Gallery icon: top 149→24 (slides up)
-  - Pill tabs: top 138→16 (slides up)
-  - SearchSheetV2: slides up in sync with pill
-- `displayedMode` updates pill highlight instantly at transition start; `activeMode` switches at blur midpoint (camera image changes behind blur)
-- SearchSheetV2: no handle/prompt, shows product card when scanned
+- HomeIndicator in controls area
+- Onboarding modal shown on first load → Coachmark tooltip after dismissal
 
 ### Camera Assets
 | Asset | Used by |
@@ -136,14 +134,9 @@ All scan modes use a 3-step flow:
 - **Barcode mode:** Darker overlay (0.5 opacity), clear cutout box for barcode alignment, search sheet slides up
 - **Non-barcode modes:** Light overlay (0.2 opacity), corner brackets, tooltip bubble, shutter button visible
 - **Phone frame:** Fixed 393x852px with 32px border radius, simulates iPhone
-
-## HTML Prototypes (Design Reference)
-
-These files contain the full design specs and flows to implement in the React Native app:
-
-- **prototypes.html** — All 4 result screen types (Barcode product card, Food PlateIQ results, Menu item list, Recipe card with ingredients/servings/points). Each has a complete 4-step flow.
-- **scanner-screens.html** — Missing screens, error states, happy path flows
-- **smart-scan.html** — Interactive scanner with mode transitions, animations, shutter flash effect
+- **iOS sheet overlay (FoodResult):** White sheet at top:54, borderRadius:38, shadow 0 15 75 rgba(0,0,0,0.18). Spring animation (tension:65, friction:11). Dismiss: X button, tap scrim (rgba(0,0,0,0.45)), or swipe-down via PanResponder on drag handle (threshold: 100px or velocity 0.5)
+- **iOS push transition:** Two-page pattern inside sheet — pages animate translateX ±393px with spring. Used for food swap-to-search flow
+- **Design tokens:** bg `#e6efff` (blue_01_meno), text `#031aa1` (on_surface/primary), dark `#031373` (blue_09_clinic), border `#b0bcc8` (neutral_04), card shadow `0 2 2 rgba(7,5,23,0.04)`
 
 ---
 

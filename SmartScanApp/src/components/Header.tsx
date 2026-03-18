@@ -3,11 +3,15 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Svg, Path } from 'react-native-svg';
 
 // Header bar with back arrow, "Smart Scan" title, and flash-off icon
-export default function Header() {
+type Props = {
+  onBack?: () => void; // called when back arrow is tapped
+};
+
+export default function Header({ onBack }: Props) {
   return (
     <View style={styles.header}>
-      {/* Back arrow button */}
-      <TouchableOpacity style={styles.iconButton}>
+      {/* Back arrow button — navigates back to MyDay */}
+      <TouchableOpacity style={styles.iconButton} onPress={onBack}>
         <Svg width={28} height={28} viewBox="0 0 28 28" fill="none">
           <Path
             d="M18 6L10 14L18 22"

@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Image, Text, StyleSheet } from 'react-native';
-import type { ScanMode } from './ModeTabs';
+// Scan mode type — matches the modes in App.tsx
+type ScanMode = 'Barcode' | 'Food' | 'Auto' | 'Recipe' | 'Menu';
 
 // Camera preview area that changes based on the active scan mode and step:
 // - Each mode uses its own background photo from assets
@@ -99,6 +100,14 @@ export default function CameraView({ mode, step = 1 }: Props) {
               <Text style={styles.barcodeLabelText}>
                 Align barcode inside the box
               </Text>
+            </View>
+          )}
+          {/* Step 2: Green "Barcode" detected pill — shown after scan detects barcode */}
+          {/* Extra marginTop (56px) to match Figma's 72px gap (16 from wrapper + 56) */}
+          {step === 2 && (
+            <View style={[styles.detectedPill, { marginTop: 56 }]}>
+              <View style={styles.detectedDot} />
+              <Text style={styles.detectedText}>Barcode</Text>
             </View>
           )}
         </View>
